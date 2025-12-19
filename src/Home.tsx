@@ -56,7 +56,7 @@ export default function Home() {
                             <p>No hay sorteos activos por el momento. ¡Vuelve pronto!</p>
                         </div>
                     ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '2.5rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2rem' }}>
                             {raffles.map(raffle => (
                                 <div key={raffle.id} className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                                     {/* Image */}

@@ -85,10 +85,10 @@ export default function HeroCarousel() {
                         position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
                         textAlign: 'center', color: 'white', width: '100%', zIndex: 10
                     }}>
-                        <h1 style={{ fontSize: '4rem', fontWeight: '800', marginBottom: '1rem', textShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
+                        <h1 style={{ fontSize: 'clamp(2.5rem, 8vw, 4rem)', fontWeight: '800', marginBottom: '1rem', textShadow: '0 4px 20px rgba(0,0,0,0.5)', lineHeight: 1.1 }}>
                             {slide.title}
                         </h1>
-                        <p style={{ fontSize: '1.5rem', marginBottom: '2rem', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
+                        <p style={{ fontSize: 'clamp(1rem, 4vw, 1.5rem)', marginBottom: '2rem', textShadow: '0 2px 10px rgba(0,0,0,0.5)', maxWidth: '90%', margin: '0 auto 2rem auto' }}>
                             {slide.subtitle}
                         </p>
                         <a href="#rifas" className="btn" style={{
