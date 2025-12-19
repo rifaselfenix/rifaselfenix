@@ -60,9 +60,21 @@ export default function Home() {
                             {raffles.map(raffle => (
                                 <div key={raffle.id} className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                                     {/* Image */}
+                                    {/* Media (Image or Video) */}
                                     <div style={{ height: '200px', background: 'linear-gradient(135deg, #fce7f3 0%, #fae8ff 100%)', borderRadius: '1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                                         {raffle.image_url ? (
-                                            <img src={raffle.image_url} alt={raffle.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            raffle.image_url.match(/\.(mp4|webm|ogg)$/i) ? (
+                                                <video
+                                                    src={raffle.image_url}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                    muted
+                                                    loop
+                                                    autoPlay
+                                                    playsInline
+                                                />
+                                            ) : (
+                                                <img src={raffle.image_url} alt={raffle.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            )
                                         ) : (
                                             <Ticket size={64} color="#f472b6" opacity={0.5} />
                                         )}

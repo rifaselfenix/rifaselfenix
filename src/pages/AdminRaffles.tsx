@@ -108,12 +108,12 @@ export default function AdminRaffles() {
 
                         {/* Image Fields */}
                         <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, color: '#334155' }}>Imagen del Premio / Publicidad</label>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, color: '#334155' }}>Imagen o Video del Premio</label>
 
                             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
                                 <input
                                     type="file"
-                                    accept="image/*"
+                                    accept="image/*,video/*"
                                     onChange={handleImageUpload}
                                     style={{ fontSize: '0.9rem' }}
                                 />
@@ -122,7 +122,7 @@ export default function AdminRaffles() {
 
                             <input
                                 type="text"
-                                placeholder="O pega la URL de la imagen aquí..."
+                                placeholder="O pega la URL de la imagen/video aquí..."
                                 value={formData.image_url}
                                 onChange={e => setFormData({ ...formData, image_url: e.target.value })}
                                 style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
@@ -130,7 +130,11 @@ export default function AdminRaffles() {
 
                             {formData.image_url && (
                                 <div style={{ marginTop: '0.5rem' }}>
-                                    <img src={formData.image_url} alt="Preview" style={{ height: '100px', borderRadius: '0.5rem', objectFit: 'cover' }} />
+                                    {formData.image_url.match(/\.(mp4|webm|ogg)$/i) ? (
+                                        <video src={formData.image_url} style={{ height: '150px', borderRadius: '0.5rem', background: '#000' }} controls />
+                                    ) : (
+                                        <img src={formData.image_url} alt="Preview" style={{ height: '100px', borderRadius: '0.5rem', objectFit: 'cover' }} />
+                                    )}
                                 </div>
                             )}
                         </div>
