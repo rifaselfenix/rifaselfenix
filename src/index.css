@@ -1,0 +1,62 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
+
+:root {
+  --bg-main: #fdfbf7;
+  /* Blanco crema muy suave */
+  --bg-card: #ffffff;
+  --accent: #fb7185;
+  /* Pastel Rose */
+  --accent-hover: #f43f5e;
+  --text-primary: #334155;
+  /* Slate 700 */
+  --text-secondary: #64748b;
+  /* Slate 500 */
+}
+
+body {
+  margin: 0;
+  font-family: 'Outfit', sans-serif;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.card {
+  background: var(--bg-card);
+  padding: 1.5rem;
+  border-radius: 1.5rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-color: var(--accent);
+}
+
+.btn {
+  background: linear-gradient(135deg, #fbcfe8 0%, #fda4af 100%);
+  /* Pink Pastel Gradient */
+  color: #881337;
+  padding: 0.75rem 2rem;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 800;
+  display: inline-block;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(251, 113, 133, 0.3);
+  transition: transform 0.2s;
+}
+
+.btn:hover {
+  transform: scale(1.05);
+  background: linear-gradient(135deg, #f9a8d4 0%, #fb7185 100%);
+}
