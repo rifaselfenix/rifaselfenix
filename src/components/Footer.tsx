@@ -40,6 +40,29 @@ export default function Footer() {
 
             <div style={{ textAlign: 'center', marginTop: '3rem', borderTop: '1px solid #f1f5f9', paddingTop: '2rem', color: '#94a3b8', fontSize: '0.9rem' }}>
                 © {new Date().getFullYear()} Rifas Fénix. Todos los derechos reservados.
+
+                <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                    <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.8 }}>Desarrollado con tecnología de vanguardia</p>
+                    <a
+                        href="https://www.simids.com"
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            textDecoration: 'none',
+                            background: 'linear-gradient(90deg, #2563eb, #7c3aed)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            fontWeight: '900',
+                            fontSize: '1.1rem',
+                            letterSpacing: '0.5px'
+                        }}
+                    >
+                        ⚡ Powered by SIMIDS IA TECH
+                    </a>
+                </div>
             </div>
         </footer>
     );
