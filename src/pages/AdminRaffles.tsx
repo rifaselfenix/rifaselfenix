@@ -6,15 +6,38 @@ import { Link } from 'react-router-dom';
 export default function AdminRaffles() {
     const [raffles, setRaffles] = useState<any[]>([]);
     const [showForm, setShowForm] = useState(false);
-    const [formData, setFormData] = useState({ title: '', price: '', description: '' });
+    const [formData, setFormData] = useState({ title: '', price: '', description: '', image_url: '' });
+    const [uploading, setUploading] = useState(false);
 
-    useEffect(() => {
-        fetchRaffles();
-    }, []);
+    // ... useEffect ...
 
-    const fetchRaffles = async () => {
-        const { data } = await supabase.from('raffles').select('*').order('created_at', { ascending: false });
-        setRaffles(data || []);
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || e.target.files.length === 0) return;
+        const file = e.target.files[0];
+        setUploading(true);
+
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+            const filePath = `raffle-images/${fileName}`;
+
+            // Try 'images' bucket first, then 'public'
+            let bucketName = 'images';
+            let { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, file);
+
+            if (uploadError) {
+                bucketName = 'public'; // Fallback
+                const { error: publicError } = await supabase.storage.from(bucketName).upload(filePath, file);
+                if (publicError) throw publicError;
+            }
+
+            const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
+            setFormData(prev => ({ ...prev, image_url: data.publicUrl }));
+        } catch (error: any) {
+            alert('Error subiendo imagen: ' + error.message);
+        } finally {
+            setUploading(false);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -25,26 +48,24 @@ export default function AdminRaffles() {
             title: formData.title,
             price: parseFloat(formData.price),
             description: formData.description,
+            image_url: formData.image_url,
             status: 'on_sale'
         }]);
 
         if (!error) {
             setShowForm(false);
-            setFormData({ title: '', price: '', description: '' });
+            setFormData({ title: '', price: '', description: '', image_url: '' });
             fetchRaffles();
         } else {
             alert('Error creando rifa: ' + error.message);
         }
     };
 
-    const deleteRaffle = async (id: string) => {
-        if (!confirm('¿Seguro que quieres borrar esta rifa?')) return;
-        await supabase.from('raffles').delete().eq('id', id);
-        fetchRaffles();
-    };
+    // ... deleteRaffle ...
 
     return (
         <div>
+            {/* ... Header ... */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <div>
                     <h1 style={{ margin: 0, fontSize: '2rem', color: '#1e293b' }}>Mis Rifas</h1>
@@ -84,6 +105,36 @@ export default function AdminRaffles() {
                             onChange={e => setFormData({ ...formData, price: e.target.value })}
                             style={inputStyle}
                         />
+
+                        {/* Image Fields */}
+                        <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, color: '#334155' }}>Imagen del Premio / Publicidad</label>
+
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleImageUpload}
+                                    style={{ fontSize: '0.9rem' }}
+                                />
+                                {uploading && <span style={{ color: '#0284c7', fontSize: '0.9rem' }}>Subiendo...</span>}
+                            </div>
+
+                            <input
+                                type="text"
+                                placeholder="O pega la URL de la imagen aquí..."
+                                value={formData.image_url}
+                                onChange={e => setFormData({ ...formData, image_url: e.target.value })}
+                                style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
+                            />
+
+                            {formData.image_url && (
+                                <div style={{ marginTop: '0.5rem' }}>
+                                    <img src={formData.image_url} alt="Preview" style={{ height: '100px', borderRadius: '0.5rem', objectFit: 'cover' }} />
+                                </div>
+                            )}
+                        </div>
+
                         <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                             <button type="submit" className="btn">Guardar Rifa</button>
                             <button type="button" onClick={() => setShowForm(false)} style={{ ...blobButtonStyle, background: '#f1f5f9', color: '#64748b' }}>Cancelar</button>
