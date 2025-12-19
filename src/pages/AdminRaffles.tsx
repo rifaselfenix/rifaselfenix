@@ -9,7 +9,14 @@ export default function AdminRaffles() {
     const [formData, setFormData] = useState({ title: '', price: '', description: '', image_url: '' });
     const [uploading, setUploading] = useState(false);
 
-    // ... useEffect ...
+    useEffect(() => {
+        fetchRaffles();
+    }, []);
+
+    const fetchRaffles = async () => {
+        const { data } = await supabase.from('raffles').select('*').order('created_at', { ascending: false });
+        setRaffles(data || []);
+    };
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files || e.target.files.length === 0) return;
@@ -61,7 +68,11 @@ export default function AdminRaffles() {
         }
     };
 
-    // ... deleteRaffle ...
+    const deleteRaffle = async (id: string) => {
+        if (!confirm('¿Seguro que quieres borrar esta rifa?')) return;
+        await supabase.from('raffles').delete().eq('id', id);
+        fetchRaffles();
+    };
 
     return (
         <div>
