@@ -25,9 +25,9 @@ export default function Navbar() {
                 <div className="desktop-links" style={{ gap: '2rem', alignItems: 'center' }}>
                     <Link to="/" style={linkStyle}>Inicio</Link>
                     <Link to="#rifas" style={linkStyle}>Sorteos Activos</Link>
-                    <Link to="/admin" style={{ ...linkStyle, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <a href="/#/admin" style={{ ...linkStyle, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <User size={18} /> Admin
-                    </Link>
+                    </a>
                 </div>
 
                 {/* Mobile Toggle (Visible < 768px via CSS) */}
@@ -50,7 +50,7 @@ export default function Navbar() {
                 }}>
                     <Link to="/" onClick={() => setIsMobileMenuOpen(false)} style={mobileLinkStyle}>🏠 Inicio</Link>
                     <Link to="#rifas" onClick={() => setIsMobileMenuOpen(false)} style={mobileLinkStyle}>🎟️ Sorteos Activos</Link>
-                    <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)} style={mobileLinkStyle}>⚙️ Admin</Link>
+                    <a href="/#/admin" onClick={() => setIsMobileMenuOpen(false)} style={mobileLinkStyle}>⚙️ Admin</a>
                 </div>
             )}
         </nav>
