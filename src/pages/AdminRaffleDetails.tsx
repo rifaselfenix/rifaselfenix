@@ -13,8 +13,9 @@ export default function AdminRaffleDetails() {
     const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
 
     // Form States
-    const [newMethod, setNewMethod] = useState({ bank_name: '', account_number: '', account_type: '', account_owner: '' });
+    const [newMethod, setNewMethod] = useState({ bank_name: '', account_number: '', account_type: '', account_owner: '', image_url: '' });
     const [showMethodForm, setShowMethodForm] = useState(false);
+    const [uploadingImage, setUploadingImage] = useState(false);
 
     useEffect(() => {
         if (id) loadData();
@@ -47,6 +48,30 @@ export default function AdminRaffleDetails() {
         await supabase.from('raffles').update({ allow_multi_ticket: newValue }).eq('id', id);
     };
 
+    const handleMethodImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || e.target.files.length === 0) return;
+        setUploadingImage(true);
+        const file = e.target.files[0];
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `bank-${Date.now()}.${fileExt}`;
+            const filePath = `payment-methods/${fileName}`;
+
+            // Try 'images' bucket, fallback to 'public' if needed, but 'public' is usually safer for this app structure
+            let bucketName = 'public';
+            const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
+            setNewMethod(prev => ({ ...prev, image_url: data.publicUrl }));
+        } catch (error: any) {
+            alert('Error subiendo logo: ' + error.message);
+        } finally {
+            setUploadingImage(false);
+        }
+    };
+
     const addPaymentMethod = async (e: React.FormEvent) => {
         e.preventDefault();
         const { data } = await supabase.from('payment_methods').insert([{
@@ -57,7 +82,7 @@ export default function AdminRaffleDetails() {
         if (data) {
             setPaymentMethods([...paymentMethods, data[0]]);
             setShowMethodForm(false);
-            setNewMethod({ bank_name: '', account_number: '', account_type: '', account_owner: '' });
+            setNewMethod({ bank_name: '', account_number: '', account_type: '', account_owner: '', image_url: '' });
         }
     };
 
@@ -134,6 +159,12 @@ export default function AdminRaffleDetails() {
                                     <input placeholder="Titular" value={newMethod.account_owner} onChange={e => setNewMethod({ ...newMethod, account_owner: e.target.value })} style={inputStyle} />
                                     <input placeholder="Tipo (Ahorros)" value={newMethod.account_type} onChange={e => setNewMethod({ ...newMethod, account_type: e.target.value })} style={inputStyle} />
                                 </div>
+                                <div style={{ marginTop: '0.5rem' }}>
+                                    <label style={{ fontSize: '0.8rem', color: '#64748b', display: 'block', marginBottom: '0.3rem' }}>Logo o QR (Opcional)</label>
+                                    <input type="file" accept="image/*" onChange={handleMethodImageUpload} style={{ fontSize: '0.8rem' }} />
+                                    {uploadingImage && <span style={{ fontSize: '0.8rem', color: '#0284c7' }}>Subiendo...</span>}
+                                    {newMethod.image_url && <img src={newMethod.image_url} alt="Preview" style={{ height: '40px', marginTop: '0.5rem', borderRadius: '0.2rem', display: 'block' }} />}
+                                </div>
                                 <button type="submit" className="btn" style={{ background: '#2563eb', color: 'white', padding: '0.5rem', borderRadius: '0.4rem', border: 'none', cursor: 'pointer', marginTop: '0.5rem' }}>Guardar Método</button>
                             </form>
                         )}
@@ -141,9 +172,16 @@ export default function AdminRaffleDetails() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                             {paymentMethods.map(m => (
                                 <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.8rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
-                                    <div>
-                                        <div style={{ fontWeight: 'bold', color: '#334155' }}>{m.bank_name}</div>
-                                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{m.account_number} {m.account_owner ? `• ${m.account_owner}` : ''}</div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                        {m.image_url ? (
+                                            <img src={m.image_url} alt={m.bank_name} style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '0.2rem', background: 'white', padding: '2px', border: '1px solid #e2e8f0' }} />
+                                        ) : (
+                                            <div style={{ width: '40px', height: '40px', background: '#e2e8f0', borderRadius: '0.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🏦</div>
+                                        )}
+                                        <div>
+                                            <div style={{ fontWeight: 'bold', color: '#334155' }}>{m.bank_name}</div>
+                                            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{m.account_number} {m.account_owner ? `• ${m.account_owner}` : ''}</div>
+                                        </div>
                                     </div>
                                     <button onClick={() => deleteMethod(m.id)} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
                                 </div>

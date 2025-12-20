@@ -349,9 +349,17 @@ export default function Checkout() {
                                     <div style={{ marginBottom: '1.5rem', background: '#f8fafc', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
                                         <h4 style={{ margin: '0 0 0.5rem 0', color: '#334155' }}>💸 Cuentas Disponibles:</h4>
                                         {paymentMethods.map(pm => (
-                                            <div key={pm.id} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #cbd5e1', padding: '0.5rem 0' }}>
-                                                <span><strong>{pm.bank_name}</strong> {pm.account_type && `(${pm.account_type})`}</span>
-                                                <span style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>{pm.account_number}</span>
+                                            <div key={pm.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderBottom: '1px dashed #cbd5e1', padding: '0.5rem 0' }}>
+                                                {pm.image_url ? (
+                                                    <img src={pm.image_url} alt={pm.bank_name} style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '0.2rem', background: 'white', border: '1px solid #e2e8f0' }} />
+                                                ) : (
+                                                    <div style={{ width: '40px', height: '40px', background: '#e2e8f0', borderRadius: '0.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🏦</div>
+                                                )}
+                                                <div>
+                                                    <span style={{ display: 'block' }}><strong>{pm.bank_name}</strong> {pm.account_type && `(${pm.account_type})`}</span>
+                                                    <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#334155' }}>{pm.account_number}</span>
+                                                    {pm.account_owner && <span style={{ display: 'block', fontSize: '0.8rem', color: '#64748b' }}>{pm.account_owner}</span>}
+                                                </div>
                                             </div>
                                         ))}
                                         <p style={{ fontSize: '0.8rem', color: '#ef4444', marginTop: '0.5rem', marginBottom: 0 }}>
