@@ -133,7 +133,7 @@ body {
 
 @media (max-width: 768px) {
   .admin-sidebar {
-    display: none;
+    display: none !important;
   }
 
   .admin-main {
