@@ -77,7 +77,7 @@ export default function AdminRaffles() {
     return (
         <div>
             {/* ... Header ... */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <div className="admin-header">
                 <div>
                     <h1 style={{ margin: 0, fontSize: '2rem', color: '#1e293b' }}>Mis Rifas</h1>
                     <p style={{ color: '#64748b' }}>Gestiona tus sorteos activos</p>
@@ -160,15 +160,7 @@ export default function AdminRaffles() {
 
             <div style={{ display: 'grid', gap: '1rem' }}>
                 {raffles.map(raffle => (
-                    <div key={raffle.id} style={{
-                        background: 'white',
-                        padding: '1.5rem',
-                        borderRadius: '1rem',
-                        border: '1px solid #e2e8f0',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                    }}>
+                    <div key={raffle.id} className="admin-list-item">
                         <div>
                             <h3 style={{ margin: '0 0 0.5rem 0', color: '#334155' }}>{raffle.title}</h3>
                             <span style={{

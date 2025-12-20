@@ -1,31 +1,48 @@
+import { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Ticket, LogOut, Image } from 'lucide-react';
+import { LayoutDashboard, Ticket, LogOut, Image, Menu, X } from 'lucide-react';
 
 export default function AdminLayout() {
     const location = useLocation();
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     const isActive = (path: string) => location.pathname === path;
+    const closeSidebar = () => setIsSidebarOpen(false);
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh', background: '#fdfbf7' }}>
+        <div className="admin-container">
+            {/* Mobile Sidebar Overlay */}
+            <div
+                className={`admin-sidebar-overlay ${isSidebarOpen ? 'open' : ''}`}
+                onClick={closeSidebar}
+            />
+
             {/* Sidebar */}
-            <aside style={{
-                width: '260px',
-                background: 'white',
-                borderRight: '1px solid #e2e8f0',
-                padding: '2rem',
-                display: 'flex',
-                flexDirection: 'column'
-            }}>
-                <div style={{ marginBottom: '3rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '1.5rem' }}>🔥</span>
-                    <h2 style={{ margin: 0, color: '#881337', fontSize: '1.5rem' }}>Fénix Admin</h2>
+            <aside className={`admin-sidebar ${isSidebarOpen ? 'open' : ''}`}>
+                <div style={{ marginBottom: '3rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '1.5rem' }}>🔥</span>
+                        <h2 style={{ margin: 0, color: '#881337', fontSize: '1.5rem' }}>Fénix Admin</h2>
+                    </div>
+                    <button
+                        onClick={closeSidebar}
+                        className="admin-mobile-toggle"
+                        style={{ padding: '4px' }}
+                    >
+                        <X size={24} />
+                    </button>
                 </div>
 
                 <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
-                    <NavItem to="/admin" icon={<LayoutDashboard size={20} />} label="Dashboard" active={isActive('/admin')} />
-                    <NavItem to="/admin/content" icon={<Image size={20} />} label="Multimedia" active={isActive('/admin/content')} />
-                    <NavItem to="/admin/raffles" icon={<Ticket size={20} />} label="Mis Rifas" active={isActive('/admin/raffles')} />
+                    <div onClick={closeSidebar}>
+                        <NavItem to="/admin" icon={<LayoutDashboard size={20} />} label="Dashboard" active={isActive('/admin')} />
+                    </div>
+                    <div onClick={closeSidebar}>
+                        <NavItem to="/admin/content" icon={<Image size={20} />} label="Multimedia" active={isActive('/admin/content')} />
+                    </div>
+                    <div onClick={closeSidebar}>
+                        <NavItem to="/admin/raffles" icon={<Ticket size={20} />} label="Mis Rifas" active={isActive('/admin/raffles')} />
+                    </div>
                     {/* <NavItem to="/admin/settings" icon={<Settings size={20} />} label="Configuración" active={isActive('/admin/settings')} /> */}
                 </nav>
 
@@ -47,7 +64,16 @@ export default function AdminLayout() {
             </aside>
 
             {/* Main Content */}
-            <main style={{ flex: 1, padding: '3rem', overflowY: 'auto' }}>
+            <main className="admin-main">
+                <div className="admin-mobile-toggle" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                    <button
+                        onClick={() => setIsSidebarOpen(true)}
+                        style={{ background: 'none', border: 'none', padding: 0, color: '#881337', cursor: 'pointer' }}
+                    >
+                        <Menu size={28} />
+                    </button>
+                    <span style={{ fontWeight: 'bold', color: '#881337', fontSize: '1.2rem' }}>Menú</span>
+                </div>
                 <Outlet />
             </main>
         </div>

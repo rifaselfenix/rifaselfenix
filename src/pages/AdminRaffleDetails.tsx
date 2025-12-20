@@ -158,56 +158,58 @@ export default function AdminRaffleDetails() {
 
             {/* Tickets Table */}
             <div style={{ background: 'white', borderRadius: '1rem', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                    <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                        <tr>
-                            <th style={thStyle}># Ticket</th>
-                            <th style={thStyle}>Cliente</th>
-                            <th style={thStyle}>Contacto</th>
-                            <th style={thStyle}>Fecha</th>
-                            <th style={thStyle}>Precio</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {tickets.length === 0 ? (
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
+                        <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                             <tr>
-                                <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
-                                    Aún no hay ventas. ¡Comparte tu rifa!
-                                </td>
+                                <th style={thStyle}># Ticket</th>
+                                <th style={thStyle}>Cliente</th>
+                                <th style={thStyle}>Contacto</th>
+                                <th style={thStyle}>Fecha</th>
+                                <th style={thStyle}>Precio</th>
                             </tr>
-                        ) : tickets.map((t) => (
-                            <tr key={t.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                <td style={tdStyle}>
-                                    <span style={{ background: '#eff6ff', color: '#2563eb', padding: '0.2rem 0.6rem', borderRadius: '999px', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                                        {t.ticket_number.toString().padStart(4, '0')}
-                                    </span>
-                                </td>
-                                <td style={tdStyle}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <User size={16} color="#94a3b8" />
-                                        <span style={{ fontWeight: 500, color: '#334155' }}>{t.client_name || 'Anónimo'}</span>
-                                    </div>
-                                    {t.client_id_number && <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginLeft: '1.5rem' }}>ID: {t.client_id_number}</div>}
-                                </td>
-                                <td style={tdStyle}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b' }}>
-                                        <Phone size={16} />
-                                        {t.client_phone || '-'}
-                                    </div>
-                                </td>
-                                <td style={tdStyle}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.9rem' }}>
-                                        <Calendar size={16} />
-                                        {new Date(t.created_at).toLocaleDateString()}
-                                    </div>
-                                </td>
-                                <td style={tdStyle}>
-                                    ${t.price_paid}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {tickets.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
+                                        Aún no hay ventas. ¡Comparte tu rifa!
+                                    </td>
+                                </tr>
+                            ) : tickets.map((t) => (
+                                <tr key={t.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                    <td style={tdStyle}>
+                                        <span style={{ background: '#eff6ff', color: '#2563eb', padding: '0.2rem 0.6rem', borderRadius: '999px', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                                            {t.ticket_number.toString().padStart(4, '0')}
+                                        </span>
+                                    </td>
+                                    <td style={tdStyle}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <User size={16} color="#94a3b8" />
+                                            <span style={{ fontWeight: 500, color: '#334155' }}>{t.client_name || 'Anónimo'}</span>
+                                        </div>
+                                        {t.client_id_number && <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginLeft: '1.5rem' }}>ID: {t.client_id_number}</div>}
+                                    </td>
+                                    <td style={tdStyle}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b' }}>
+                                            <Phone size={16} />
+                                            {t.client_phone || '-'}
+                                        </div>
+                                    </td>
+                                    <td style={tdStyle}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.9rem' }}>
+                                            <Calendar size={16} />
+                                            {new Date(t.created_at).toLocaleDateString()}
+                                        </div>
+                                    </td>
+                                    <td style={tdStyle}>
+                                        ${t.price_paid}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     );

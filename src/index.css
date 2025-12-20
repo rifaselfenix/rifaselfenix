@@ -81,3 +81,117 @@ body {
     display: none !important;
   }
 }
+
+/* --- Admin Layout Styles --- */
+.admin-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--bg-main);
+  position: relative;
+}
+
+.admin-sidebar {
+  width: 260px;
+  background: white;
+  border-right: 1px solid #e2e8f0;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease;
+  z-index: 50;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+}
+
+.admin-main {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .admin-main {
+    padding: 3rem;
+  }
+}
+
+.admin-mobile-toggle {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #881337;
+  padding: 0;
+  margin-bottom: 1rem;
+}
+
+.admin-sidebar-overlay {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .admin-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    transform: translateX(-100%);
+    box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+  }
+
+  .admin-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .admin-mobile-toggle {
+    display: block;
+  }
+
+  .admin-sidebar-overlay.open {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 40;
+    backdrop-filter: blur(2px);
+  }
+}
+
+/* Admin Helpers */
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.admin-list-item {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  .admin-list-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .admin-list-item>div:last-child {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+}

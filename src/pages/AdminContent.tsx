@@ -60,7 +60,7 @@ export default function AdminContent() {
             <h1 style={{ color: '#1e293b', marginBottom: '2rem' }}>🎨 Gestor Multimedia</h1>
 
             {/* Tabs */}
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
                 <button
                     onClick={() => { setSection('carousel'); setShowForm(false); }}
                     className="btn"
@@ -84,7 +84,7 @@ export default function AdminContent() {
             </div>
 
             {/* Action Bar */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <div className="admin-header">
                 <h3 style={{ margin: 0 }}>
                     {section === 'carousel' ? 'Diapositivas del Inicio' : 'Testimonios de Ganadores'}
                 </h3>
