@@ -222,3 +222,18 @@ body {
     gap: 0.5rem;
   }
 }
+
+/* --- Responsive Utilities --- */
+.show-mobile {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none !important;
+  }
+
+  .show-mobile {
+    display: block !important;
+  }
+}

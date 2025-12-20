@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { ArrowLeft, Phone, User, Calendar } from 'lucide-react';
+import { ArrowLeft, Phone, User, Calendar, Ticket } from 'lucide-react';
 
 export default function AdminRaffleDetails() {
     const { id } = useParams();
@@ -157,60 +157,88 @@ export default function AdminRaffleDetails() {
             <h3 style={{ color: '#334155', marginBottom: '1rem' }}>📋 Lista de Compradores</h3>
 
             {/* Tickets Table */}
-            <div style={{ background: 'white', borderRadius: '1rem', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-                <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
-                        <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                            <tr>
-                                <th style={thStyle}># Ticket</th>
-                                <th style={thStyle}>Cliente</th>
-                                <th style={thStyle}>Contacto</th>
-                                <th style={thStyle}>Fecha</th>
-                                <th style={thStyle}>Precio</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {tickets.length === 0 ? (
-                                <tr>
-                                    <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
-                                        Aún no hay ventas. ¡Comparte tu rifa!
-                                    </td>
-                                </tr>
-                            ) : tickets.map((t) => (
-                                <tr key={t.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                    <td style={tdStyle}>
-                                        <span style={{ background: '#eff6ff', color: '#2563eb', padding: '0.2rem 0.6rem', borderRadius: '999px', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                                            {t.ticket_number.toString().padStart(4, '0')}
-                                        </span>
-                                    </td>
-                                    <td style={tdStyle}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <User size={16} color="#94a3b8" />
-                                            <span style={{ fontWeight: 500, color: '#334155' }}>{t.client_name || 'Anónimo'}</span>
-                                        </div>
-                                        {t.client_id_number && <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginLeft: '1.5rem' }}>ID: {t.client_id_number}</div>}
-                                    </td>
-                                    <td style={tdStyle}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b' }}>
-                                            <Phone size={16} />
-                                            {t.client_phone || '-'}
-                                        </div>
-                                    </td>
-                                    <td style={tdStyle}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.9rem' }}>
-                                            <Calendar size={16} />
-                                            {new Date(t.created_at).toLocaleDateString()}
-                                        </div>
-                                    </td>
-                                    <td style={tdStyle}>
-                                        ${t.price_paid}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+            {/* Tickets List - Responsive */}
+            {tickets.length === 0 ? (
+                <div style={{ padding: '3rem', textAlign: 'center', background: 'white', borderRadius: '1rem', border: '1px solid #e2e8f0', color: '#64748b' }}>
+                    <Ticket size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                    <p>Aún no hay ventas. ¡Comparte tu rifa!</p>
                 </div>
-            </div>
+            ) : (
+                <>
+                    {/* Desktop Table */}
+                    <div className="hide-mobile" style={{ background: 'white', borderRadius: '1rem', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
+                                <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                                    <tr>
+                                        <th style={thStyle}># Ticket</th>
+                                        <th style={thStyle}>Cliente</th>
+                                        <th style={thStyle}>Contacto</th>
+                                        <th style={thStyle}>Fecha</th>
+                                        <th style={thStyle}>Precio</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {tickets.map((t) => (
+                                        <tr key={t.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                            <td style={tdStyle}>
+                                                <span style={{ background: '#eff6ff', color: '#2563eb', padding: '0.2rem 0.6rem', borderRadius: '999px', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                                                    {t.ticket_number.toString().padStart(4, '0')}
+                                                </span>
+                                            </td>
+                                            <td style={tdStyle}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <User size={16} color="#94a3b8" />
+                                                    <span style={{ fontWeight: 500, color: '#334155' }}>{t.client_name || 'Anónimo'}</span>
+                                                </div>
+                                                {t.client_id_number && <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginLeft: '1.5rem' }}>ID: {t.client_id_number}</div>}
+                                            </td>
+                                            <td style={tdStyle}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b' }}>
+                                                    <Phone size={16} />
+                                                    {t.client_phone || '-'}
+                                                </div>
+                                            </td>
+                                            <td style={tdStyle}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.9rem' }}>
+                                                    <Calendar size={16} />
+                                                    {new Date(t.created_at).toLocaleDateString()}
+                                                </div>
+                                            </td>
+                                            <td style={tdStyle}>
+                                                ${t.price_paid}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Mobile Cards */}
+                    <div className="show-mobile" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        {tickets.map((t) => (
+                            <div key={t.id} style={{ background: 'white', padding: '1rem', borderRadius: '1rem', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                        <span style={{ background: '#eff6ff', color: '#2563eb', padding: '0.2rem 0.6rem', borderRadius: '999px', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                                            #{t.ticket_number.toString().padStart(4, '0')}
+                                        </span>
+                                        <span style={{ fontWeight: '600', color: '#334155' }}>{t.client_name || 'Anónimo'}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.85rem', color: '#64748b' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Phone size={14} /> {t.client_phone || '-'}</div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Calendar size={14} /> {new Date(t.created_at).toLocaleDateString()}</div>
+                                    </div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                    <span style={{ fontWeight: 'bold', color: '#059669' }}>${t.price_paid}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </>
+            )}
         </div>
     );
 }
