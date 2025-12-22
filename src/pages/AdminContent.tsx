@@ -49,6 +49,34 @@ export default function AdminContent() {
         fetchContent();
     };
 
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || e.target.files.length === 0) return;
+        const file = e.target.files[0];
+
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `content-${Date.now()}.${fileExt}`;
+            const filePath = `site-content/${fileName}`;
+
+            let bucketName = 'images';
+            let { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, file);
+
+            if (uploadError) {
+                bucketName = 'public';
+                const { error: publicError } = await supabase.storage.from(bucketName).upload(filePath, file);
+                if (publicError) throw publicError;
+            }
+
+            const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
+
+            // Auto-detect type
+            const type = file.type.startsWith('video/') ? 'video' : 'image';
+            setFormData(prev => ({ ...prev, url: data.publicUrl, type }));
+        } catch (error: any) {
+            alert('Error subiendo archivo: ' + error.message);
+        }
+    };
+
     const deleteItem = async (id: string) => {
         if (!confirm('¿Borrar este elemento?')) return;
         await supabase.from('site_content').delete().eq('id', id);
@@ -108,14 +136,32 @@ export default function AdminContent() {
                             </label>
                         </div>
 
-                        <input
-                            type="text"
-                            placeholder="URL de la imagen/video (https://...)"
-                            value={formData.url}
-                            onChange={e => setFormData({ ...formData, url: e.target.value })}
-                            style={inputStyle}
-                            required
-                        />
+                        <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, color: '#334155' }}>Subir Archivo</label>
+                            <input type="file" accept="image/*,video/*" onChange={handleFileUpload} style={{ marginBottom: '0.5rem' }} />
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>O pega una URL:</span>
+                                <input
+                                    type="text"
+                                    placeholder="https://..."
+                                    value={formData.url}
+                                    onChange={e => setFormData({ ...formData, url: e.target.value })}
+                                    style={{ ...inputStyle, flex: 1 }}
+                                    required
+                                />
+                            </div>
+
+                            {formData.url && (
+                                <div style={{ marginTop: '0.5rem' }}>
+                                    {formData.type === 'video' ? (
+                                        <video src={formData.url} style={{ height: '100px', background: '#000' }} controls />
+                                    ) : (
+                                        <img src={formData.url} alt="Preview" style={{ height: '100px', objectFit: 'cover' }} />
+                                    )}
+                                </div>
+                            )}
+                        </div>
 
                         {section === 'carousel' ? (
                             <>

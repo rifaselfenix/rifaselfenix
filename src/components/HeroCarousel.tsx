@@ -11,23 +11,24 @@ export default function HeroCarousel() {
     }, []);
 
     const fetchSlides = async () => {
-        const { data } = await supabase.from('site_content').select('*').eq('section', 'carousel').order('created_at', { ascending: false });
+        const { data } = await supabase.from('raffles').select('*').eq('status', 'on_sale').order('created_at', { ascending: false });
         if (data && data.length > 0) {
-            setSlides(data);
+            setSlides(data.map(raffle => ({
+                id: raffle.id,
+                type: raffle.image_url?.match(/\.(mp4|webm|ogg)(\?|$)/i) ? 'video' : 'image',
+                url: raffle.image_url,
+                title: raffle.title,
+                subtitle: raffle.description
+            })));
         } else {
-            // Default fallbacks if nothing in DB
+            // Default fallback if no raffles
             setSlides([
                 {
-                    type: 'video',
-                    url: 'https://cdn.coverr.co/videos/coverr-driving-a-convertible-car-5432/1080p.mp4',
-                    title: 'Gana la Libertad',
-                    subtitle: 'Participa por vehículos de alta gama'
-                },
-                {
                     type: 'image',
-                    url: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?q=80&w=2670&auto=format&fit=crop',
-                    title: 'Adrenalina Pura',
-                    subtitle: 'Motos deportivas esperan por ti'
+                    url: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?q=80',
+                    title: '¡Bienvenido a Fénix!',
+                    subtitle: 'Tus rifas favoritas en un solo lugar',
+                    id: null
                 }
             ]);
         }
@@ -93,8 +94,12 @@ export default function HeroCarousel() {
                         </p>
                         <button
                             onClick={() => {
-                                const element = document.getElementById('rifas');
-                                if (element) element.scrollIntoView({ behavior: 'smooth' });
+                                if (slide.id) {
+                                    window.location.hash = `/checkout/${slide.id}`;
+                                } else {
+                                    const element = document.getElementById('rifas');
+                                    if (element) element.scrollIntoView({ behavior: 'smooth' });
+                                }
                             }}
                             className="btn"
                             style={{
