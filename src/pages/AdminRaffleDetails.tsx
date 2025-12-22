@@ -201,7 +201,15 @@ export default function AdminRaffleDetails() {
                                     </div>
                                     {raffle.image_url && (
                                         <div style={{ marginTop: '1rem' }}>
-                                            <img src={raffle.image_url} alt="Premio" style={{ height: '80px', borderRadius: '0.5rem', objectFit: 'cover' }} />
+                                            {raffle.image_url.match(/\.(mp4|webm|ogg)$/i) ? (
+                                                <video
+                                                    src={raffle.image_url}
+                                                    controls
+                                                    style={{ height: '150px', borderRadius: '0.5rem', background: '#000', maxWidth: '100%' }}
+                                                />
+                                            ) : (
+                                                <img src={raffle.image_url} alt="Premio" style={{ height: '150px', borderRadius: '0.5rem', objectFit: 'cover', maxWidth: '100%' }} />
+                                            )}
                                         </div>
                                     )}
                                 </>
@@ -231,11 +239,17 @@ export default function AdminRaffleDetails() {
                                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                                         <div style={{ position: 'relative', overflow: 'hidden', display: 'inline-block' }}>
                                             <button type="button" style={{ ...inputStyle, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f1f5f9' }}>
-                                                <Camera size={18} /> Cambiar Foto
+                                                <Camera size={18} /> Cambiar Multimedia
                                             </button>
-                                            <input type="file" accept="image/*" onChange={handleEditImageUpload} style={{ position: 'absolute', top: 0, left: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }} />
+                                            <input type="file" accept="image/*,video/*" onChange={handleEditImageUpload} style={{ position: 'absolute', top: 0, left: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }} />
                                         </div>
-                                        {editForm.image_url && <img src={editForm.image_url} alt="Preview" style={{ height: '40px', borderRadius: '0.3rem' }} />}
+                                        {editForm.image_url && (
+                                            editForm.image_url.match(/\.(mp4|webm|ogg)$/i) ? (
+                                                <video src={editForm.image_url} style={{ height: '60px', borderRadius: '0.3rem', background: '#000' }} muted />
+                                            ) : (
+                                                <img src={editForm.image_url} alt="Preview" style={{ height: '40px', borderRadius: '0.3rem' }} />
+                                            )
+                                        )}
                                     </div>
 
                                     <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
