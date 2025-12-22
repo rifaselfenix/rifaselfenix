@@ -411,3 +411,16 @@ export default function AdminRaffleDetails() {
 const inputStyle = { padding: '0.6rem', borderRadius: '0.4rem', border: '1px solid #cbd5e1', fontSize: '0.9rem', width: '100%', boxSizing: 'border-box' as const };
 const thStyle = { padding: '1rem', fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase' as const, letterSpacing: '0.05em' };
 const tdStyle = { padding: '1rem', fontSize: '0.95rem' };
+
+const blobButtonStyle = {
+    border: 'none',
+    padding: '0.75rem',
+    borderRadius: '0.5rem',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'background 0.2s',
+    fontSize: '0.9rem',
+    gap: '0.5rem'
+};
