@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { ArrowLeft, Phone, User, Calendar, Ticket } from 'lucide-react';
+import { ArrowLeft, Phone, User, Calendar, Ticket, Edit2, Save, X, Camera } from 'lucide-react';
 
 export default function AdminRaffleDetails() {
     const { id } = useParams();
@@ -17,6 +17,11 @@ export default function AdminRaffleDetails() {
     const [showMethodForm, setShowMethodForm] = useState(false);
     const [uploadingImage, setUploadingImage] = useState(false);
 
+    // Edit Raffle States
+    const [isEditing, setIsEditing] = useState(false);
+    const [editForm, setEditForm] = useState({ title: '', description: '', price: '', image_url: '' });
+    const [updating, setUpdating] = useState(false);
+
     useEffect(() => {
         if (id) loadData();
     }, [id]);
@@ -27,6 +32,12 @@ export default function AdminRaffleDetails() {
         setRaffle(raffleData);
         if (raffleData) {
             setConfig({ allow_multi_ticket: raffleData.allow_multi_ticket || false });
+            setEditForm({
+                title: raffleData.title,
+                description: raffleData.description || '',
+                price: raffleData.price,
+                image_url: raffleData.image_url || ''
+            });
         }
 
         // 2. Cargar Tickets Vendidos
@@ -92,6 +103,44 @@ export default function AdminRaffleDetails() {
         setPaymentMethods(paymentMethods.filter(m => m.id !== methodId));
     };
 
+    const handleEditImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || e.target.files.length === 0) return;
+        const file = e.target.files[0];
+        setUpdating(true);
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `raffle-edit-${Date.now()}.${fileExt}`;
+            const filePath = `raffle-images/${fileName}`;
+            const { error: uploadError } = await supabase.storage.from('public').upload(filePath, file);
+            if (uploadError) throw uploadError;
+            const { data } = supabase.storage.from('public').getPublicUrl(filePath);
+            setEditForm(prev => ({ ...prev, image_url: data.publicUrl }));
+        } catch (error: any) {
+            alert('Error subiendo imagen: ' + error.message);
+        } finally {
+            setUpdating(false);
+        }
+    };
+
+    const handleUpdateRaffle = async () => {
+        if (!editForm.title || !editForm.price) return alert('Título y Precio son obligatorios');
+        setUpdating(true);
+        const { error } = await supabase.from('raffles').update({
+            title: editForm.title,
+            description: editForm.description,
+            price: parseFloat(editForm.price as any),
+            image_url: editForm.image_url
+        }).eq('id', id);
+
+        if (error) {
+            alert('Error actualizando: ' + error.message);
+        } else {
+            setRaffle({ ...raffle, ...editForm });
+            setIsEditing(false);
+        }
+        setUpdating(false);
+    };
+
     if (!raffle) return <div style={{ padding: '2rem' }}>Cargando...</div>;
 
     return (
@@ -105,12 +154,74 @@ export default function AdminRaffleDetails() {
 
                 {/* Main Info Card */}
                 <div style={{ background: 'white', padding: '2rem', borderRadius: '1rem', border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
-                            <h1 style={{ marginTop: 0, color: '#1e293b' }}>{raffle.title}</h1>
-                            <p style={{ color: '#64748b', margin: 0 }}>{raffle.description}</p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '2rem' }}>
+                        <div style={{ flex: 1 }}>
+                            {!isEditing ? (
+                                <>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+                                        <h1 style={{ marginTop: 0, color: '#1e293b', marginBottom: 0 }}>{raffle.title}</h1>
+                                        <button onClick={() => setIsEditing(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }} title="Editar Rifa">
+                                            <Edit2 size={20} />
+                                        </button>
+                                    </div>
+                                    <p style={{ color: '#64748b', margin: '0 0 1rem 0' }}>{raffle.description}</p>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#059669' }}>
+                                            ${raffle.price} <span style={{ fontSize: '0.9rem', fontWeight: 'normal', color: '#64748b' }}>/ ticket</span>
+                                        </span>
+                                    </div>
+                                    {raffle.image_url && (
+                                        <div style={{ marginTop: '1rem' }}>
+                                            <img src={raffle.image_url} alt="Premio" style={{ height: '80px', borderRadius: '0.5rem', objectFit: 'cover' }} />
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', animation: 'fadeIn 0.2s' }}>
+                                    <input
+                                        type="text"
+                                        value={editForm.title}
+                                        onChange={e => setEditForm({ ...editForm, title: e.target.value })}
+                                        placeholder="Título de la Rifa"
+                                        style={{ ...inputStyle, fontSize: '1.2rem', fontWeight: 'bold' }}
+                                    />
+                                    <input
+                                        type="text"
+                                        value={editForm.description}
+                                        onChange={e => setEditForm({ ...editForm, description: e.target.value })}
+                                        placeholder="Descripción Corta"
+                                        style={inputStyle}
+                                    />
+                                    <input
+                                        type="number"
+                                        value={editForm.price}
+                                        onChange={e => setEditForm({ ...editForm, price: e.target.value })}
+                                        placeholder="Precio"
+                                        style={inputStyle}
+                                    />
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                        <div style={{ position: 'relative', overflow: 'hidden', display: 'inline-block' }}>
+                                            <button type="button" style={{ ...inputStyle, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f1f5f9' }}>
+                                                <Camera size={18} /> Cambiar Foto
+                                            </button>
+                                            <input type="file" accept="image/*" onChange={handleEditImageUpload} style={{ position: 'absolute', top: 0, left: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }} />
+                                        </div>
+                                        {editForm.image_url && <img src={editForm.image_url} alt="Preview" style={{ height: '40px', borderRadius: '0.3rem' }} />}
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                                        <button onClick={handleUpdateRaffle} disabled={updating} className="btn" style={{ padding: '0.5rem 1rem', display: 'flex', gap: '0.5rem' }}>
+                                            <Save size={18} /> {updating ? 'Guardando...' : 'Guardar'}
+                                        </button>
+                                        <button onClick={() => setIsEditing(false)} style={{ ...blobButtonStyle, background: '#f1f5f9', color: '#64748b' }}>
+                                            <X size={18} /> Cancelar
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                        <div style={{ textAlign: 'right' }}>
+
+                        <div style={{ textAlign: 'right', minWidth: '120px' }}>
                             <span style={{ fontSize: '2rem', fontWeight: 'bold', color: '#059669' }}>
                                 {tickets.length}
                             </span>
