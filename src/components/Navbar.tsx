@@ -17,7 +17,7 @@ export default function Navbar() {
                 <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <span style={{ fontSize: '1.8rem' }}>🔥</span>
                     <span style={{ fontSize: '1.5rem', fontWeight: '800', background: 'linear-gradient(to right, #be123c, #fb7185)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        Rifas Fénix v2.2 (Fix)
+                        Rifas Fénix
                     </span>
                 </Link>
 
