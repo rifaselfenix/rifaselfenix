@@ -158,10 +158,26 @@ export default function AdminRaffleDetails() {
                         <div style={{ flex: 1 }}>
                             {!isEditing ? (
                                 <>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
                                         <h1 style={{ marginTop: 0, color: '#1e293b', marginBottom: 0 }}>{raffle.title}</h1>
-                                        <button onClick={() => setIsEditing(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }} title="Editar Rifa">
-                                            <Edit2 size={20} />
+                                        <button
+                                            onClick={() => setIsEditing(true)}
+                                            style={{
+                                                background: '#eff6ff',
+                                                border: '1px solid #bfdbfe',
+                                                cursor: 'pointer',
+                                                color: '#2563eb',
+                                                padding: '0.5rem 1rem',
+                                                borderRadius: '0.5rem',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.5rem',
+                                                fontWeight: '600',
+                                                fontSize: '0.9rem'
+                                            }}
+                                            title="Editar Rifa"
+                                        >
+                                            <Edit2 size={16} /> Editar Rifa
                                         </button>
                                     </div>
                                     <p style={{ color: '#64748b', margin: '0 0 1rem 0' }}>{raffle.description}</p>
