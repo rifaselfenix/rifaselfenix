@@ -462,13 +462,7 @@ export default function AdminRaffleDetails() {
                     </div>
                 </>
             )}
-            {/* Debug Info - Remove in production */}
-            <div style={{ marginTop: '3rem', padding: '1rem', background: '#f1f5f9', borderRadius: '0.5rem', fontSize: '0.75rem', color: '#64748b' }}>
-                <p><strong>Debug Info:</strong> (Si ves esto, es para detectar errores)</p>
-                <button onClick={() => alert(JSON.stringify(raffle, null, 2))} style={{ border: '1px solid #cbd5e1', padding: '0.5rem', cursor: 'pointer' }}>
-                    Ver Datos Crudos en DB
-                </button>
-            </div>
+
         </div>
     );
 }
