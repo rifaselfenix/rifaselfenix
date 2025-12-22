@@ -58,10 +58,28 @@ export default function AdminRaffleDetails() {
             const newValue = !config.allow_multi_ticket;
             // Optimistic update
             setConfig({ ...config, allow_multi_ticket: newValue });
-            const { error } = await supabase.from('raffles').update({ allow_multi_ticket: newValue }).eq('id', id);
-            if (error) throw error;
+
+            // Perform update and SELECT the updated row to confirm it worked
+            const { data, error } = await supabase
+                .from('raffles')
+                .update({ allow_multi_ticket: newValue })
+                .eq('id', id)
+                .select();
+
+            if (error) {
+                // Check specifically for missing column error
+                if (error.code === '42703') {
+                    throw new Error("Falta la columna 'allow_multi_ticket' en la base de datos.");
+                }
+                throw error;
+            }
+
+            if (!data || data.length === 0) {
+                throw new Error("No se pudo guardar (posible error de permisos RLS).");
+            }
         } catch (error: any) {
-            alert('Error actualizando configuración: ' + error.message);
+            alert('❌ ERROR: ' + error.message);
+            console.error(error);
             // Revert on error
             setConfig({ ...config, allow_multi_ticket: !config.allow_multi_ticket });
         }
@@ -146,20 +164,25 @@ export default function AdminRaffleDetails() {
     const handleUpdateRaffle = async () => {
         if (!editForm.title || !editForm.price) return alert('Título y Precio son obligatorios');
         setUpdating(true);
-        const { error } = await supabase.from('raffles').update({
-            title: editForm.title,
-            description: editForm.description,
-            price: parseFloat(editForm.price as any),
-            image_url: editForm.image_url
-        }).eq('id', id);
+        try {
+            const { data, error } = await supabase.from('raffles').update({
+                title: editForm.title,
+                description: editForm.description,
+                price: parseFloat(editForm.price as any),
+                image_url: editForm.image_url
+            }).eq('id', id).select();
 
-        if (error) {
-            alert('Error actualizando: ' + error.message);
-        } else {
+            if (error) throw error;
+            if (!data || data.length === 0) throw new Error("No se guardó (error de permisos).");
+
             setRaffle({ ...raffle, ...editForm });
             setIsEditing(false);
+            alert("✅ Cambios guardados correctamente.");
+        } catch (error: any) {
+            alert('❌ Error actualizando: ' + error.message);
+        } finally {
+            setUpdating(false);
         }
-        setUpdating(false);
     };
 
     if (!raffle) return <div style={{ padding: '2rem' }}>Cargando...</div>;
@@ -439,6 +462,13 @@ export default function AdminRaffleDetails() {
                     </div>
                 </>
             )}
+            {/* Debug Info - Remove in production */}
+            <div style={{ marginTop: '3rem', padding: '1rem', background: '#f1f5f9', borderRadius: '0.5rem', fontSize: '0.75rem', color: '#64748b' }}>
+                <p><strong>Debug Info:</strong> (Si ves esto, es para detectar errores)</p>
+                <button onClick={() => alert(JSON.stringify(raffle, null, 2))} style={{ border: '1px solid #cbd5e1', padding: '0.5rem', cursor: 'pointer' }}>
+                    Ver Datos Crudos en DB
+                </button>
+            </div>
         </div>
     );
 }
