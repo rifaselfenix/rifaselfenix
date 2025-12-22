@@ -14,7 +14,6 @@ export default function Checkout() {
     const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
 
     const [buying, setBuying] = useState(false);
-    const [mode, setMode] = useState<'machine' | 'manual'>('machine');
 
     // --- User Form States ---
     const [userDetails, setUserDetails] = useState({ name: '', phone: '', idNumber: '' });
@@ -48,25 +47,49 @@ export default function Checkout() {
             .then(({ data }) => setPaymentMethods(data || []));
     }, [id]);
 
-    // Lógica Slot Machine (Picks ONE random number)
+    // Lógica Lucky Pick (Soporta Multi-ticket)
     const spinMachine = () => {
         if (spinning) return;
-        setSpinning(true);
-        setSelectedNumbers([]); // Reset previous
+        if (!raffle?.allow_multi_ticket) {
+            setSelectedNumbers([]); // Solo limpiar si es single ticket
+        }
 
-        const duration = 2500;
+        setSpinning(true);
+
+        const duration = 1500;
         const interval = setInterval(() => {
-            setSlots([Math.floor(Math.random() * 10), Math.floor(Math.random() * 10), Math.floor(Math.random() * 10), Math.floor(Math.random() * 10)]);
+            setSlots([
+                Math.floor(Math.random() * 10),
+                Math.floor(Math.random() * 10),
+                Math.floor(Math.random() * 10),
+                Math.floor(Math.random() * 10)
+            ]);
         }, 50);
 
         setTimeout(() => {
             clearInterval(interval);
             let luckyNumber;
-            do { luckyNumber = Math.floor(Math.random() * 10000); } while (soldTickets.includes(luckyNumber));
+            let attempts = 0;
+            do {
+                luckyNumber = Math.floor(Math.random() * 10000);
+                attempts++;
+            } while ((soldTickets.includes(luckyNumber) || selectedNumbers.includes(luckyNumber)) && attempts < 1000);
+
+            if (attempts >= 1000) {
+                alert('¡Quedan pocos números disponibles!');
+                setSpinning(false);
+                return;
+            }
 
             const digits = luckyNumber.toString().padStart(4, '0').split('').map(Number);
             setSlots(digits);
-            setSelectedNumbers([luckyNumber]); // Select just one
+
+            if (raffle?.allow_multi_ticket) {
+                setSelectedNumbers(prev => [...prev, luckyNumber]);
+            } else {
+                setSelectedNumbers([luckyNumber]);
+            }
+
             setSpinning(false);
             confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#fda4af', '#fcd34d', '#67e8f9'] });
         }, duration);
@@ -93,7 +116,6 @@ export default function Checkout() {
         const num = parseInt(val);
         if (!isNaN(num) && num >= 0 && num < totalNumbers) {
             setCurrentPage(Math.floor(num / pageSize));
-            // Only select if not sold logic? No, just nav.
         }
     };
 
@@ -114,25 +136,19 @@ export default function Checkout() {
             if (receiptFile) {
                 const fileExt = receiptFile.name.split('.').pop();
                 const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-                const { data: uploadData, error: uploadError } = await supabase.storage
-                    .from('receipts') // Assuming 'receipts' bucket exists.
-                    .upload(fileName, receiptFile);
+
+                // Try 'images' bucket first (common across projects), then public
+                let bucketName = 'images';
+                let { error: uploadError } = await supabase.storage.from(bucketName).upload(`receipts/${fileName}`, receiptFile);
 
                 if (uploadError) {
-                    // Fallback: try 'images' bucket or just skip and warn
-                    console.warn("Error uploading receipt to 'receipts', trying 'public'", uploadError);
-                    const { data: uploadData2, error: uploadError2 } = await supabase.storage
-                        .from('public')
-                        .upload(`receipts/${fileName}`, receiptFile);
-
-                    if (!uploadError2 && uploadData2) {
-                        const { data: publicUrl } = supabase.storage.from('public').getPublicUrl(`receipts/${fileName}`);
-                        receiptUrl = publicUrl.publicUrl;
-                    }
-                } else if (uploadData) {
-                    const { data: publicUrl } = supabase.storage.from('receipts').getPublicUrl(fileName);
-                    receiptUrl = publicUrl.publicUrl;
+                    bucketName = 'public';
+                    const { error: publicError } = await supabase.storage.from(bucketName).upload(`receipts/${fileName}`, receiptFile);
+                    if (publicError) throw publicError;
                 }
+
+                const { data } = supabase.storage.from(bucketName).getPublicUrl(`receipts/${fileName}`);
+                receiptUrl = data.publicUrl;
             }
 
             // 2. Insert Tickets
@@ -171,12 +187,12 @@ export default function Checkout() {
             setShowUserForm(false);
             setReceiptFile(null);
             setSlots([0, 0, 0, 0]);
+            setUserDetails({ name: '', phone: '', idNumber: '' });
 
         } catch (error: any) {
             console.error(error);
             if (error.code === '23505') {
                 alert('¡Ups! Uno de los números seleccionados ya fue comprado. Por favor intentalo de nuevo.');
-                // Refresh sold data?
             } else {
                 alert('Error al reservar: ' + error.message);
             }
@@ -202,136 +218,117 @@ export default function Checkout() {
                 <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{raffle.title}</h1>
                 <p style={{ color: '#94a3b8', fontSize: '1.2rem' }}>{raffle.description}</p>
 
-                {/* Tab Switcher */}
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', margin: '2rem 0' }}>
-                    <button onClick={() => { setMode('machine'); }} className="btn" style={getTabStyle(mode === 'machine')}>
-                        🎰 Máquina
-                    </button>
-                    <button onClick={() => { setMode('manual'); }} className="btn" style={getTabStyle(mode === 'manual')}>
-                        🔢 Elegir
-                    </button>
-                </div>
+                <div className="card" style={{ padding: '2rem', minHeight: '300px', marginTop: '2rem' }}>
 
-                <div className="card" style={{ padding: '2rem', minHeight: '300px' }}>
+                    {/* VISTA UNIFICADA */}
+                    <div>
+                        {/* Controls Bar */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem', background: '#f8fafc', padding: '1rem', borderRadius: '1rem' }}>
 
-                    {/* VISTA MÁQUINA */}
-                    {mode === 'machine' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                            <div style={{
-                                display: 'flex', gap: '0.8rem',
-                                background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
-                                padding: '2rem', borderRadius: '1.5rem',
-                                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), inset 0 2px 2px rgba(255,255,255,0.1)',
-                                border: '4px solid #334155',
-                                marginBottom: '2rem'
-                            }}>
-                                {slots.map((num, i) => (
-                                    <div key={i} style={{
-                                        ...slotStyle,
-                                        width: '70px',
-                                        height: '100px',
-                                        background: 'linear-gradient(to bottom, #d1d5db 0%, #ffffff 20%, #ffffff 80%, #d1d5db 100%)',
-                                        border: '1px solid #94a3b8',
-                                        fontSize: '4rem',
-                                        boxShadow: 'inset 0 0 20px rgba(0,0,0,0.1), 0 2px 5px rgba(0,0,0,0.2)',
-                                        transform: spinning ? 'scale(0.95)' : 'scale(1)',
-                                        filter: spinning ? 'blur(2px)' : 'none',
-                                        transition: 'transform 0.1s'
-                                    }}>
-                                        <span style={{ transform: spinning ? 'translateY(5px)' : 'none', display: 'block' }}>
-                                            {num}
-                                        </span>
-                                    </div>
-                                ))}
+                            {/* Pagination */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <button className="btn" onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage === 0} style={{ padding: '0.5rem', borderRadius: '0.5rem' }}><ChevronLeft /></button>
+                                <span style={{ fontWeight: 'bold', minWidth: '100px', textAlign: 'center', color: '#64748b' }}>
+                                    {currentPage * pageSize} - {((currentPage + 1) * pageSize) - 1}
+                                </span>
+                                <button className="btn" onClick={() => setCurrentPage(p => Math.min(99, p + 1))} disabled={currentPage === 99} style={{ padding: '0.5rem', borderRadius: '0.5rem' }}><ChevronRight /></button>
                             </div>
 
-                            {selectedNumbers.length === 0 || spinning ? (
-                                <button onClick={spinMachine} disabled={spinning} className="btn" style={{ fontSize: '1.2rem', padding: '1rem 3rem', opacity: spinning ? 0.7 : 1 }}>
-                                    {spinning ? 'Girando...' : '🎰 TIRAR PALANCA'}
+                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                {/* Random Button */}
+                                <button
+                                    onClick={spinMachine}
+                                    disabled={spinning}
+                                    className="btn"
+                                    style={{
+                                        background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                                        color: 'white',
+                                        padding: '0.6rem 1.2rem',
+                                        display: 'flex',
+                                        gap: '0.5rem',
+                                        alignItems: 'center',
+                                        boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.4)'
+                                    }}
+                                >
+                                    <span style={{ fontSize: '1.2rem' }}>{spinning ? '🎲' : '🎰'}</span>
+                                    {spinning ? 'Girando...' : 'Azar'}
                                 </button>
-                            ) : (
-                                <div style={{ animation: 'fadeIn 0.3s' }}>
-                                    <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#be123c', marginBottom: '1rem' }}>
-                                        ¡Tu número: {selectedNumbers[0]}!
-                                    </p>
-                                    <button onClick={handleBuyClick} className="btn" style={{ background: '#10b981', ...buyBtnBase }}>
-                                        <TicketIcon size={24} />
-                                        Comprar Ahora
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    )}
 
-                    {/* VISTA GRID */}
-                    {mode === 'manual' && (
-                        <div>
-                            {/* Controls */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <button className="btn" onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage === 0} style={{ padding: '0.5rem', borderRadius: '0.5rem' }}><ChevronLeft /></button>
-                                    <span style={{ fontWeight: 'bold', minWidth: '100px', textAlign: 'center' }}>
-                                        {currentPage * pageSize} - {((currentPage + 1) * pageSize) - 1}
-                                    </span>
-                                    <button className="btn" onClick={() => setCurrentPage(p => Math.min(99, p + 1))} disabled={currentPage === 99} style={{ padding: '0.5rem', borderRadius: '0.5rem' }}><ChevronRight /></button>
-                                </div>
-
+                                {/* Search */}
                                 <div style={{ position: 'relative' }}>
-                                    <Search size={18} style={{ position: 'absolute', left: 10, top: 10, color: '#94a3b8' }} />
+                                    <Search size={18} style={{ position: 'absolute', left: 10, top: 11, color: '#94a3b8' }} />
                                     <input
                                         type="text"
-                                        placeholder="Buscar (0000-9999)"
+                                        placeholder="Buscar..."
                                         value={searchTerm}
                                         onChange={e => handleSearch(e.target.value)}
-                                        style={{ padding: '0.5rem 0.5rem 0.5rem 2.2rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1' }}
+                                        style={{ padding: '0.6rem 0.6rem 0.6rem 2.2rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', width: '120px' }}
                                     />
                                 </div>
                             </div>
-
-                            {/* The Grid */}
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))', gap: '0.5rem' }}>
-                                {visibleNumbers.map(num => {
-                                    const isSold = soldTickets.includes(num);
-                                    const isSelected = selectedNumbers.includes(num);
-                                    return (
-                                        <button
-                                            key={num}
-                                            disabled={isSold}
-                                            onClick={() => toggleNumber(num)}
-                                            style={{
-                                                padding: '0.5rem',
-                                                borderRadius: '0.5rem',
-                                                border: isSelected ? '2px solid #fb7185' : '1px solid #e2e8f0',
-                                                background: isSold ? '#cbd5e1' : isSelected ? '#fff1f2' : '#fff',
-                                                color: isSold ? '#64748b' : isSelected ? '#be123c' : '#334155',
-                                                cursor: isSold ? 'not-allowed' : 'pointer',
-                                                fontWeight: isSelected ? 'bold' : 'normal',
-                                                transition: 'all 0.1s',
-                                                transform: isSelected ? 'scale(1.1)' : 'scale(1)'
-                                            }}
-                                        >
-                                            {num.toString().padStart(4, '0')}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-
-                            {/* Bottom Action */}
-                            {selectedNumbers.length > 0 && (
-                                <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'fadeIn 0.2s', background: '#fff1f2', padding: '1rem', borderRadius: '1rem' }}>
-                                    <p style={{ margin: '0 0 1rem 0', color: '#be123c' }}>
-                                        Has seleccionado <strong>{selectedNumbers.length}</strong> ticket{selectedNumbers.length > 1 ? 's' : ''}.
-                                        <br />
-                                        Total: <strong style={{ fontSize: '1.2rem' }}>${(selectedNumbers.length * raffle.price).toLocaleString()}</strong>
-                                    </p>
-                                    <button onClick={handleBuyClick} className="btn" style={{ background: '#10b981', ...buyBtnBase }}>
-                                        <TicketIcon size={24} />
-                                        Confirmar Selección
-                                    </button>
-                                </div>
-                            )}
                         </div>
-                    )}
+
+                        {/* Small Slots Animation (Optional integration) */}
+                        {spinning && (
+                            <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                                {slots.map((num, i) => (
+                                    <div key={i} style={{ width: '40px', height: '50px', background: '#1e293b', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '0.3rem', fontSize: '1.5rem', fontWeight: 'bold' }}>
+                                        {num}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* The Grid */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))', gap: '0.5rem' }}>
+                            {visibleNumbers.map(num => {
+                                const isSold = soldTickets.includes(num);
+                                const isSelected = selectedNumbers.includes(num);
+                                return (
+                                    <button
+                                        key={num}
+                                        disabled={isSold}
+                                        onClick={() => toggleNumber(num)}
+                                        style={{
+                                            padding: '0.5rem',
+                                            borderRadius: '0.5rem',
+                                            border: isSelected ? '2px solid #fb7185' : '1px solid #e2e8f0',
+                                            background: isSold ? '#cbd5e1' : isSelected ? '#fff1f2' : '#fff',
+                                            color: isSold ? '#64748b' : isSelected ? '#be123c' : '#334155',
+                                            cursor: isSold ? 'not-allowed' : 'pointer',
+                                            fontWeight: isSelected ? 'bold' : 'normal',
+                                            transition: 'all 0.1s',
+                                            transform: isSelected ? 'scale(1.1)' : 'scale(1)'
+                                        }}
+                                    >
+                                        {num.toString().padStart(4, '0')}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Bottom Action */}
+                        {selectedNumbers.length > 0 && (
+                            <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'fadeIn 0.2s', background: '#fff1f2', padding: '1rem', borderRadius: '1rem', border: '1px solid #fecdd3' }}>
+                                <p style={{ margin: '0 0 1rem 0', color: '#be123c', textAlign: 'center' }}>
+                                    Has seleccionado <strong>{selectedNumbers.length}</strong> ticket{selectedNumbers.length > 1 ? 's' : ''}.
+                                    <br />
+                                    Total: <strong style={{ fontSize: '1.4rem' }}>${(selectedNumbers.length * raffle.price).toLocaleString()}</strong>
+                                </p>
+                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '1rem' }}>
+                                    {selectedNumbers.map(n => (
+                                        <span key={n} style={{ background: 'white', padding: '0.2rem 0.5rem', borderRadius: '0.3rem', border: '1px solid #fda4af', fontSize: '0.9rem', color: '#be123c' }}>
+                                            {n.toString().padStart(4, '0')}
+                                        </span>
+                                    ))}
+                                </div>
+                                <button onClick={handleBuyClick} className="btn" style={{ background: '#10b981', ...buyBtnBase, width: '100%', justifyContent: 'center' }}>
+                                    <TicketIcon size={24} />
+                                    Confirmar Compra
+                                </button>
+                            </div>
+                        )}
+                    </div>
 
                     {/* MODAL DE DATOS */}
                     {showUserForm && (
@@ -414,28 +411,6 @@ export default function Checkout() {
         </div>
     );
 }
-
-// Subcomponents & Styles
-const getTabStyle = (active: boolean) => ({
-    background: active ? 'linear-gradient(135deg, #fbcfe8 0%, #fda4af 100%)' : '#e2e8f0',
-    color: active ? '#881337' : '#64748b',
-    boxShadow: 'none',
-    transform: 'none'
-});
-
-const slotStyle = {
-    width: '60px',
-    height: '80px',
-    background: '#fdfbf7',
-    borderRadius: '0.5rem',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '3rem',
-    fontWeight: '800',
-    color: '#be123c',
-    boxShadow: 'inset 0 0 10px rgba(0,0,0,0.1), 0 0 5px rgba(0,0,0,0.2)'
-};
 
 const inputStyle = { padding: '0.8rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', width: '100%', boxSizing: 'border-box' as const };
 const btnStyle = { border: 'none', padding: '0.8rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 'bold' };
