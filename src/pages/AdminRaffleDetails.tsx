@@ -68,11 +68,15 @@ export default function AdminRaffleDetails() {
             const fileName = `bank-${Date.now()}.${fileExt}`;
             const filePath = `payment-methods/${fileName}`;
 
-            // Try 'images' bucket, fallback to 'public' if needed, but 'public' is usually safer for this app structure
-            let bucketName = 'public';
-            const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, file);
+            // Try 'images' bucket first, then 'public'
+            let bucketName = 'images';
+            let { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, file);
 
-            if (uploadError) throw uploadError;
+            if (uploadError) {
+                bucketName = 'public'; // Fallback
+                const { error: publicError } = await supabase.storage.from(bucketName).upload(filePath, file);
+                if (publicError) throw publicError;
+            }
 
             const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
             setNewMethod(prev => ({ ...prev, image_url: data.publicUrl }));
@@ -111,9 +115,18 @@ export default function AdminRaffleDetails() {
             const fileExt = file.name.split('.').pop();
             const fileName = `raffle-edit-${Date.now()}.${fileExt}`;
             const filePath = `raffle-images/${fileName}`;
-            const { error: uploadError } = await supabase.storage.from('public').upload(filePath, file);
-            if (uploadError) throw uploadError;
-            const { data } = supabase.storage.from('public').getPublicUrl(filePath);
+
+            // Try 'images' bucket first, then 'public'
+            let bucketName = 'images';
+            let { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, file);
+
+            if (uploadError) {
+                bucketName = 'public'; // Fallback
+                const { error: publicError } = await supabase.storage.from(bucketName).upload(filePath, file);
+                if (publicError) throw publicError;
+            }
+
+            const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
             setEditForm(prev => ({ ...prev, image_url: data.publicUrl }));
         } catch (error: any) {
             alert('Error subiendo imagen: ' + error.message);
@@ -147,7 +160,7 @@ export default function AdminRaffleDetails() {
         <div>
             {/* Header */}
             <Link to="/admin/raffles" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#64748b', marginBottom: '1rem' }}>
-                <ArrowLeft size={18} /> Volver a Rifas (v0.0.3)
+                <ArrowLeft size={18} /> Volver a Rifas
             </Link>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
