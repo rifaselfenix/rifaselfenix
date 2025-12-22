@@ -237,3 +237,39 @@ body {
     display: block !important;
   }
 }
+
+/* --- Admin Card Responsive --- */
+.admin-card {
+  background: white;
+  padding: 2rem;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+}
+
+.admin-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 2rem;
+}
+
+@media (max-width: 768px) {
+  .admin-card {
+    padding: 1rem;
+  }
+
+  .admin-card-header {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .admin-card-header>div:last-child {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 1rem;
+    margin-top: 0.5rem;
+  }
+}

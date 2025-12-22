@@ -54,9 +54,17 @@ export default function AdminRaffleDetails() {
     };
 
     const toggleMultiTicket = async () => {
-        const newValue = !config.allow_multi_ticket;
-        setConfig({ ...config, allow_multi_ticket: newValue });
-        await supabase.from('raffles').update({ allow_multi_ticket: newValue }).eq('id', id);
+        try {
+            const newValue = !config.allow_multi_ticket;
+            // Optimistic update
+            setConfig({ ...config, allow_multi_ticket: newValue });
+            const { error } = await supabase.from('raffles').update({ allow_multi_ticket: newValue }).eq('id', id);
+            if (error) throw error;
+        } catch (error: any) {
+            alert('Error actualizando configuración: ' + error.message);
+            // Revert on error
+            setConfig({ ...config, allow_multi_ticket: !config.allow_multi_ticket });
+        }
     };
 
     const handleMethodImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -166,8 +174,8 @@ export default function AdminRaffleDetails() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
 
                 {/* Main Info Card */}
-                <div style={{ background: 'white', padding: '2rem', borderRadius: '1rem', border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '2rem' }}>
+                <div className="admin-card">
+                    <div className="admin-card-header">
                         <div style={{ flex: 1 }}>
                             {!isEditing ? (
                                 <>
