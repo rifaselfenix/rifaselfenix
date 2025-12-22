@@ -15,6 +15,8 @@ export default function Checkout() {
 
     const [buying, setBuying] = useState(false);
     const [previewNumber, setPreviewNumber] = useState<number | null>(null);
+    const [conversionRate, setConversionRate] = useState<number>(0);
+    const [selectedPayment, setSelectedPayment] = useState<any>(null);
 
     // --- User Form States ---
     const [userDetails, setUserDetails] = useState({ name: '', phone: '', idNumber: '' });
@@ -27,7 +29,7 @@ export default function Checkout() {
     const totalNumbers = 10000;
     const [searchTerm, setSearchTerm] = useState('');
 
-    // --- Machine States ---
+    // --- Machine States (Simplified for single pick for now) ---
     const [spinning, setSpinning] = useState(false);
     const [slots, setSlots] = useState([0, 0, 0, 0]);
 
@@ -46,7 +48,22 @@ export default function Checkout() {
         // 2. Fetch Payment Methods
         supabase.from('payment_methods').select('*').eq('raffle_id', id)
             .then(({ data }) => setPaymentMethods(data || []));
+
+        // 3. Fetch Conversion Rate
+        supabase.from('app_settings').select('value').eq('key', 'conversion_rate_ves').single()
+            .then(({ data }) => {
+                if (data) setConversionRate(parseFloat(data.value) || 0);
+            });
     }, [id]);
+
+    const formatPrice = (usdAmount: number) => {
+        const usd = usdAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+        if (conversionRate > 0) {
+            const ves = (usdAmount * conversionRate).toLocaleString('es-VE', { style: 'currency', currency: 'VES' });
+            return `${usd} / ${ves}`;
+        }
+        return usd;
+    };
 
     // Lógica Lucky Pick (Soporta Multi-ticket via Preview)
     const spinMachine = () => {
@@ -131,6 +148,7 @@ export default function Checkout() {
     const handleBuyClick = () => {
         if (!raffle || selectedNumbers.length === 0) return;
         setShowUserForm(true);
+        setSelectedPayment(null); // Reset payment selection
     };
 
     const confirmPurchase = async (e: React.FormEvent) => {
@@ -197,6 +215,7 @@ export default function Checkout() {
             setReceiptFile(null);
             setSlots([0, 0, 0, 0]);
             setUserDetails({ name: '', phone: '', idNumber: '' });
+            setSelectedPayment(null);
 
         } catch (error: any) {
             console.error(error);
@@ -219,13 +238,31 @@ export default function Checkout() {
 
     if (!raffle) return <div className="container" style={{ textAlign: 'center', marginTop: '5rem' }}>Cargando...</div>;
 
+    // Helper to determine if media is video
+    const isVideo = (url: string) => url?.match(/\.(mp4|webm|ogg)|video/i);
+
     return (
         <div className="container" style={{ maxWidth: '1000px' }}>
             <Link to="/" style={{ color: '#94a3b8', textDecoration: 'none' }}>← Volver</Link>
 
             <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-                <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{raffle.title}</h1>
-                <p style={{ color: '#94a3b8', fontSize: '1.2rem' }}>{raffle.description}</p>
+
+                {/* Header with Media Preview */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                    {raffle.image_url && (
+                        <div style={{ borderRadius: '1rem', overflow: 'hidden', maxWidth: '200px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
+                            {isVideo(raffle.image_url) ? (
+                                <video src={raffle.image_url} autoPlay muted loop playsInline style={{ width: '100%', display: 'block' }} />
+                            ) : (
+                                <img src={raffle.image_url} alt={raffle.title} style={{ width: '100%', display: 'block' }} />
+                            )}
+                        </div>
+                    )}
+                    <div>
+                        <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{raffle.title}</h1>
+                        <p style={{ color: '#94a3b8', fontSize: '1.2rem' }}>{raffle.description}</p>
+                    </div>
+                </div>
 
                 <div className="card" style={{ padding: '2rem', minHeight: '300px', marginTop: '2rem' }}>
 
@@ -345,7 +382,7 @@ export default function Checkout() {
                                 <p style={{ margin: '0 0 1rem 0', color: '#be123c', textAlign: 'center' }}>
                                     Has seleccionado <strong>{selectedNumbers.length}</strong> ticket{selectedNumbers.length > 1 ? 's' : ''}.
                                     <br />
-                                    Total: <strong style={{ fontSize: '1.4rem' }}>${(selectedNumbers.length * raffle.price).toLocaleString()}</strong>
+                                    Total: <strong style={{ fontSize: '1.4rem' }}>{formatPrice(selectedNumbers.length * raffle.price)}</strong>
                                 </p>
                                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '1rem' }}>
                                     {selectedNumbers.map(n => (
@@ -378,32 +415,72 @@ export default function Checkout() {
                         }}>
                             <div style={{ background: 'white', padding: '2rem', borderRadius: '1rem', width: '90%', maxWidth: '500px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', maxHeight: '90vh', overflowY: 'auto' }}>
                                 <h2 style={{ marginTop: 0, color: '#1e293b' }}>🚀 Finaliza tu compra</h2>
-                                <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>Estás adquiriendo {selectedNumbers.length} boletos por <strong>${(selectedNumbers.length * raffle.price).toLocaleString()}</strong></p>
+                                <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>
+                                    Total a pagar: <strong>{formatPrice(selectedNumbers.length * raffle.price)}</strong>
+                                </p>
 
-                                {/* Payment Methods Display */}
-                                {paymentMethods.length > 0 && (
-                                    <div style={{ marginBottom: '1.5rem', background: '#f8fafc', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
-                                        <h4 style={{ margin: '0 0 0.5rem 0', color: '#334155' }}>💸 Cuentas Disponibles:</h4>
-                                        {paymentMethods.map(pm => (
-                                            <div key={pm.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', borderBottom: '1px dashed #cbd5e1', padding: '0.5rem 0' }}>
-                                                {pm.image_url ? (
-                                                    <img src={pm.image_url} alt={pm.bank_name} style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '0.2rem', background: 'white', border: '1px solid #e2e8f0' }} />
-                                                ) : (
-                                                    <div style={{ width: '40px', height: '40px', background: '#e2e8f0', borderRadius: '0.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🏦</div>
-                                                )}
-                                                <div>
-                                                    <span style={{ display: 'block' }}><strong>{pm.bank_name}</strong> {pm.account_type && `(${pm.account_type})`}</span>
-                                                    <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#334155' }}>{pm.account_number}</span>
-                                                    {pm.account_owner && <span style={{ display: 'block', fontSize: '0.8rem', color: '#64748b' }}>{pm.account_owner}</span>}
+                                {/* Step 1: Payment Method Selection */}
+                                <div style={{ marginBottom: '2rem' }}>
+                                    <h4 style={{ margin: '0 0 1rem 0', color: '#334155' }}>1. Selecciona Método de Pago:</h4>
+
+                                    {!selectedPayment ? (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '1rem' }}>
+                                            {paymentMethods.map(pm => (
+                                                <button
+                                                    key={pm.id}
+                                                    onClick={() => setSelectedPayment(pm)}
+                                                    style={{
+                                                        border: '1px solid #e2e8f0', borderRadius: '0.5rem', background: 'white', padding: '1rem',
+                                                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', cursor: 'pointer',
+                                                        transition: 'all 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                                                    }}
+                                                    className="payment-method-btn"
+                                                >
+                                                    {pm.image_url ? (
+                                                        <img src={pm.image_url} alt={pm.bank_name} style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+                                                    ) : (
+                                                        <div style={{ width: '40px', height: '40px', background: '#e2e8f0', borderRadius: '0.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🏦</div>
+                                                    )}
+                                                    <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#475569', textAlign: 'center' }}>{pm.bank_name}</span>
+                                                </button>
+                                            ))}
+                                            {paymentMethods.length === 0 && <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>No hay métodos de pago configurados.</p>}
+                                        </div>
+                                    ) : (
+                                        <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '0.8rem', border: '1px solid #e2e8f0', animation: 'fadeIn 0.3s' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                                    {selectedPayment.image_url && <img src={selectedPayment.image_url} alt={selectedPayment.bank_name} style={{ width: '50px', height: '50px', objectFit: 'contain', background: 'white', borderRadius: '0.4rem', border: '1px solid #e2e8f0' }} />}
+                                                    <div>
+                                                        <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>{selectedPayment.bank_name}</h3>
+                                                        <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>{selectedPayment.account_type}</p>
+                                                    </div>
                                                 </div>
+                                                <button onClick={() => setSelectedPayment(null)} style={{ color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '600' }}>Cambiar</button>
                                             </div>
-                                        ))}
-                                        <p style={{ fontSize: '0.8rem', color: '#ef4444', marginTop: '0.5rem', marginBottom: 0 }}>
-                                            * Realiza la transferencia y sube el comprobante abajo.
-                                        </p>
-                                    </div>
-                                )}
 
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '1rem', color: '#334155' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e2e8f0', paddingBottom: '0.5rem' }}>
+                                                    <span style={{ color: '#64748b' }}>Cuenta:</span>
+                                                    <span style={{ fontFamily: 'monospace', fontWeight: 'bold', fontSize: '1.1rem' }}>{selectedPayment.account_number}</span>
+                                                </div>
+                                                {selectedPayment.account_owner && (
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e2e8f0', paddingBottom: '0.5rem' }}>
+                                                        <span style={{ color: '#64748b' }}>Titular:</span>
+                                                        <span style={{ fontWeight: '500' }}>{selectedPayment.account_owner}</span>
+                                                    </div>
+                                                )}
+                                                {/* Aquí se podría agregar la tasa de cambio específica si aplica */}
+                                            </div>
+
+                                            <p style={{ fontSize: '0.85rem', color: '#ef4444', marginTop: '1rem', textAlign: 'center', background: '#fef2f2', padding: '0.5rem', borderRadius: '0.4rem' }}>
+                                                ⚠️ Realiza el pago exacto y guarda la captura.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <h4 style={{ margin: '0 0 1rem 0', color: '#334155' }}>2. Ingresa tus Datos y Comprobante:</h4>
                                 <form onSubmit={confirmPurchase} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                     <input
                                         required placeholder="Nombre Completo"

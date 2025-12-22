@@ -3,11 +3,29 @@ import { supabase } from '../lib/supabase';
 import { TrendingUp, DollarSign, Ticket } from 'lucide-react';
 
 export default function AdminDashboard() {
+    const [rate, setRate] = useState<string>('');
     const [stats, setStats] = useState({ totalSales: 0, totalTickets: 0, activeRaffles: 0 });
+    const [loadingRate, setLoadingRate] = useState(false);
 
     useEffect(() => {
         loadStats();
+        loadRate();
     }, []);
+
+    const loadRate = async () => {
+        const { data } = await supabase.from('app_settings').select('value').eq('key', 'conversion_rate_ves').single();
+        if (data) setRate(data.value);
+    };
+
+    const updateRate = async () => {
+        setLoadingRate(true);
+        const { error } = await supabase.from('app_settings').upsert({
+            key: 'conversion_rate_ves',
+            value: rate
+        });
+        setLoadingRate(false);
+        if (!error) alert('Tasa actualizada correctamente');
+    };
 
     const loadStats = async () => {
         // 1. Contar Rifas
@@ -33,7 +51,27 @@ export default function AdminDashboard() {
 
     return (
         <div>
-            <h1 style={{ fontSize: '2rem', color: '#1e293b', marginBottom: '2rem' }}>Dashboard</h1>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                <h1 style={{ fontSize: '2rem', color: '#1e293b', margin: 0 }}>Dashboard</h1>
+
+                {/* Configuración Rápida de Tasa */}
+                <div style={{ background: 'white', padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.9rem', color: '#64748b' }}>Tasa USD/VES:</span>
+                    <input
+                        type="number"
+                        value={rate}
+                        onChange={e => setRate(e.target.value)}
+                        style={{ width: '80px', padding: '0.3rem', border: '1px solid #cbd5e1', borderRadius: '0.3rem' }}
+                    />
+                    <button
+                        onClick={updateRate}
+                        disabled={loadingRate}
+                        style={{ background: '#2563eb', color: 'white', border: 'none', padding: '0.3rem 0.8rem', borderRadius: '0.3rem', cursor: 'pointer', fontSize: '0.8rem' }}
+                    >
+                        {loadingRate ? '...' : 'Guardar'}
+                    </button>
+                </div>
+            </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
                 <StatCard
