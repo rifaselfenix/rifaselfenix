@@ -91,12 +91,20 @@ export default function HeroCarousel() {
                         <p style={{ fontSize: 'clamp(1rem, 4vw, 1.5rem)', marginBottom: '2rem', textShadow: '0 2px 10px rgba(0,0,0,0.5)', maxWidth: '90%', margin: '0 auto 2rem auto' }}>
                             {slide.subtitle}
                         </p>
-                        <a href="#rifas" className="btn" style={{
-                            background: 'white', color: '#1e293b', border: 'none',
-                            padding: '1rem 3rem', fontSize: '1.2rem', fontWeight: 'bold'
-                        }}>
+                        <button
+                            onClick={() => {
+                                const element = document.getElementById('rifas');
+                                if (element) element.scrollIntoView({ behavior: 'smooth' });
+                            }}
+                            className="btn"
+                            style={{
+                                background: 'white', color: '#1e293b', border: 'none',
+                                padding: '1rem 3rem', fontSize: '1.2rem', fontWeight: 'bold',
+                                cursor: 'pointer', display: 'inline-block'
+                            }}
+                        >
                             Participar Ahora
-                        </a>
+                        </button>
                     </div>
                 </div>
             ))}
