@@ -14,6 +14,7 @@ export default function Checkout() {
     const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
 
     const [buying, setBuying] = useState(false);
+    const [previewNumber, setPreviewNumber] = useState<number | null>(null);
 
     // --- User Form States ---
     const [userDetails, setUserDetails] = useState({ name: '', phone: '', idNumber: '' });
@@ -26,7 +27,7 @@ export default function Checkout() {
     const totalNumbers = 10000;
     const [searchTerm, setSearchTerm] = useState('');
 
-    // --- Machine States (Simplified for single pick for now) ---
+    // --- Machine States ---
     const [spinning, setSpinning] = useState(false);
     const [slots, setSlots] = useState([0, 0, 0, 0]);
 
@@ -47,14 +48,11 @@ export default function Checkout() {
             .then(({ data }) => setPaymentMethods(data || []));
     }, [id]);
 
-    // Lógica Lucky Pick (Soporta Multi-ticket)
+    // Lógica Lucky Pick (Soporta Multi-ticket via Preview)
     const spinMachine = () => {
         if (spinning) return;
-        if (!raffle?.allow_multi_ticket) {
-            setSelectedNumbers([]); // Solo limpiar si es single ticket
-        }
-
         setSpinning(true);
+        setPreviewNumber(null); // Clear previous preview while spinning
 
         const duration = 1500;
         const interval = setInterval(() => {
@@ -83,16 +81,23 @@ export default function Checkout() {
 
             const digits = luckyNumber.toString().padStart(4, '0').split('').map(Number);
             setSlots(digits);
-
-            if (raffle?.allow_multi_ticket) {
-                setSelectedNumbers(prev => [...prev, luckyNumber]);
-            } else {
-                setSelectedNumbers([luckyNumber]);
-            }
-
+            setPreviewNumber(luckyNumber);
             setSpinning(false);
-            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#fda4af', '#fcd34d', '#67e8f9'] });
+            // Confetti for the Reveal
+            confetti({ particleCount: 100, spread: 60, origin: { y: 0.6 }, colors: ['#fda4af', '#fcd34d', '#67e8f9'] });
         }, duration);
+    };
+
+    const addPreviewToCart = () => {
+        if (previewNumber === null) return;
+
+        if (raffle?.allow_multi_ticket) {
+            setSelectedNumbers(prev => [...prev, previewNumber]);
+        } else {
+            setSelectedNumbers([previewNumber]);
+        }
+        setPreviewNumber(null);
+        confetti({ particleCount: 50, spread: 40, origin: { y: 0.7 } });
     };
 
     const toggleNumber = (num: number) => {
@@ -109,6 +114,10 @@ export default function Checkout() {
             // Single select behavior
             setSelectedNumbers([num]);
         }
+    };
+
+    const removeNumber = (numToRemove: number) => {
+        setSelectedNumbers(selectedNumbers.filter(n => n !== numToRemove));
     };
 
     const handleSearch = (val: string) => {
@@ -251,7 +260,7 @@ export default function Checkout() {
                                     }}
                                 >
                                     <span style={{ fontSize: '1.2rem' }}>{spinning ? '🎲' : '🎰'}</span>
-                                    {spinning ? 'Girando...' : 'Azar'}
+                                    {spinning ? 'Girando...' : (previewNumber !== null ? 'Girar de Nuevo' : 'Azar')}
                                 </button>
 
                                 {/* Search */}
@@ -268,14 +277,37 @@ export default function Checkout() {
                             </div>
                         </div>
 
-                        {/* Small Slots Animation (Optional integration) */}
-                        {spinning && (
-                            <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                                {slots.map((num, i) => (
-                                    <div key={i} style={{ width: '40px', height: '50px', background: '#1e293b', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '0.3rem', fontSize: '1.5rem', fontWeight: 'bold' }}>
-                                        {num}
+                        {/* MACHINE PREVIEW AREA */}
+                        {(spinning || previewNumber !== null) && (
+                            <div style={{ marginBottom: '2rem', padding: '1.5rem', background: '#eff6ff', borderRadius: '1rem', border: '2px dashed #93c5fd', display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'fadeIn 0.3s' }}>
+
+                                <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                                    {slots.map((num, i) => (
+                                        <div key={i} style={{ width: '50px', height: '70px', background: '#1e293b', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '0.5rem', fontSize: '2rem', fontWeight: 'bold', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.2)' }}>
+                                            {num}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {!spinning && previewNumber !== null && (
+                                    <div style={{ display: 'flex', gap: '1rem', animation: 'scaleIn 0.2s' }}>
+                                        <button
+                                            onClick={addPreviewToCart}
+                                            className="btn"
+                                            style={{ background: '#10b981', color: 'white', fontSize: '1.1rem', padding: '0.8rem 1.5rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}
+                                        >
+                                            <TicketIcon size={20} /> AGREGAR #{previewNumber.toString().padStart(4, '0')}
+                                        </button>
+                                        <button
+                                            onClick={spinMachine}
+                                            className="btn"
+                                            style={{ background: '#fff', color: '#6366f1', border: '1px solid #6366f1', padding: '0.8rem 1.5rem' }}
+                                        >
+                                            Intentar otro
+                                        </button>
                                     </div>
-                                ))}
+                                )}
+                                {spinning && <p style={{ color: '#6366f1', fontWeight: 'bold' }}>Buscando tu número de la suerte...</p>}
                             </div>
                         )}
 
@@ -317,9 +349,16 @@ export default function Checkout() {
                                 </p>
                                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '1rem' }}>
                                     {selectedNumbers.map(n => (
-                                        <span key={n} style={{ background: 'white', padding: '0.2rem 0.5rem', borderRadius: '0.3rem', border: '1px solid #fda4af', fontSize: '0.9rem', color: '#be123c' }}>
+                                        <div key={n} style={{ background: 'white', padding: '0.3rem 0.6rem', borderRadius: '0.4rem', border: '1px solid #fda4af', fontSize: '1rem', color: '#be123c', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                             {n.toString().padStart(4, '0')}
-                                        </span>
+                                            <button
+                                                onClick={() => removeNumber(n)}
+                                                style={{ border: 'none', background: '#fee2e2', color: '#ef4444', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}
+                                                title="Eliminar ticket"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
                                     ))}
                                 </div>
                                 <button onClick={handleBuyClick} className="btn" style={{ background: '#10b981', ...buyBtnBase, width: '100%', justifyContent: 'center' }}>
