@@ -141,7 +141,7 @@ export default function AdminRaffles() {
 
                             {formData.image_url && (
                                 <div style={{ marginTop: '0.5rem' }}>
-                                    {formData.image_url.match(/\.(mp4|webm|ogg)$/i) ? (
+                                    {formData.image_url.match(/\.(mp4|webm|ogg)|video/i) ? (
                                         <video src={formData.image_url} style={{ height: '150px', borderRadius: '0.5rem', background: '#000' }} controls />
                                     ) : (
                                         <img src={formData.image_url} alt="Preview" style={{ height: '100px', borderRadius: '0.5rem', objectFit: 'cover' }} />
