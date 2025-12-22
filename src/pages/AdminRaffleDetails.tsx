@@ -201,7 +201,7 @@ export default function AdminRaffleDetails() {
                                     </div>
                                     {raffle.image_url && (
                                         <div style={{ marginTop: '1rem' }}>
-                                            {raffle.image_url.match(/\.(mp4|webm|ogg)(\?|$)/i) ? (
+                                            {raffle.image_url.match(/\.(mp4|webm|ogg)|video/i) ? (
                                                 <video
                                                     src={raffle.image_url}
                                                     controls
@@ -244,7 +244,7 @@ export default function AdminRaffleDetails() {
                                             <input type="file" accept="image/*,video/*" onChange={handleEditImageUpload} style={{ position: 'absolute', top: 0, left: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }} />
                                         </div>
                                         {editForm.image_url && (
-                                            editForm.image_url.match(/\.(mp4|webm|ogg)(\?|$)/i) ? (
+                                            editForm.image_url.match(/\.(mp4|webm|ogg)|video/i) ? (
                                                 <video src={editForm.image_url} style={{ height: '60px', borderRadius: '0.3rem', background: '#000' }} muted />
                                             ) : (
                                                 <img src={editForm.image_url} alt="Preview" style={{ height: '40px', borderRadius: '0.3rem' }} />
