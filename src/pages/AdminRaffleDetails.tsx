@@ -147,7 +147,7 @@ export default function AdminRaffleDetails() {
         <div>
             {/* Header */}
             <Link to="/admin/raffles" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#64748b', marginBottom: '1rem' }}>
-                <ArrowLeft size={18} /> Volver a Rifas
+                <ArrowLeft size={18} /> Volver a Rifas (v0.0.3)
             </Link>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
