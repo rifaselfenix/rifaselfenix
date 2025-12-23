@@ -18,13 +18,22 @@ export default function AdminDashboard() {
     };
 
     const updateRate = async () => {
+        if (!rate) return;
         setLoadingRate(true);
+
+        // Ensure we are sending a string value
         const { error } = await supabase.from('app_settings').upsert({
             key: 'conversion_rate_ves',
-            value: rate
-        });
+            value: String(rate)
+        }, { onConflict: 'key' }); // Explicitly state conflict target
+
         setLoadingRate(false);
-        if (!error) alert('Tasa actualizada correctamente');
+        if (error) {
+            console.error('Error updating rate:', error);
+            alert('Error al guardar la tasa: ' + error.message);
+        } else {
+            alert('Tasa actualizada correctamente');
+        }
     };
 
     const loadStats = async () => {
