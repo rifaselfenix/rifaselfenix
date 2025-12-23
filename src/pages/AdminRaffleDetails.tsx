@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { ArrowLeft, Phone, Edit2, CheckCircle, ExternalLink, Ticket } from 'lucide-react';
+import confetti from 'canvas-confetti';
+import { ArrowLeft, Phone, Edit2, CheckCircle, ExternalLink, Ticket, Trophy, Play, Download } from 'lucide-react';
 
 export default function AdminRaffleDetails() {
     const { id } = useParams();
@@ -13,10 +14,21 @@ export default function AdminRaffleDetails() {
     const [config, setConfig] = useState({ allow_multi_ticket: false });
     const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
 
+    // Manual Prices State
+    const [currencies, setCurrencies] = useState<any[]>([]);
+    const [prices, setPrices] = useState<any[]>([]);
+    const [newPrice, setNewPrice] = useState({ currency_code: 'USD', price: '' });
+
     // Form States
     const [newMethod, setNewMethod] = useState({ bank_name: '', account_number: '', account_type: '', account_owner: '', image_url: '' });
     const [showMethodForm, setShowMethodForm] = useState(false);
     const [uploadingImage, setUploadingImage] = useState(false);
+
+    // Winner Roulette States
+    const [showWinnerModal, setShowWinnerModal] = useState(false);
+    const [winner, setWinner] = useState<any>(null);
+    const [isSpinning, setIsSpinning] = useState(false);
+    const [displayNumber, setDisplayNumber] = useState('----');
 
     // Edit Raffle States
     const [isEditing, setIsEditing] = useState(false);
@@ -52,6 +64,48 @@ export default function AdminRaffleDetails() {
         // 3. Cargar Métodos de Pago
         const { data: methods } = await supabase.from('payment_methods').select('*').eq('raffle_id', id);
         setPaymentMethods(methods || []);
+
+        // 4. Cargar Monedas y Precios
+        const { data: currData } = await supabase.from('currencies').select('*').eq('is_active', true);
+        setCurrencies(currData || []);
+
+        const { data: pricesData } = await supabase.from('raffle_prices').select('*').eq('raffle_id', id);
+        setPrices(pricesData || []);
+    };
+
+    const addPrice = async () => {
+        if (!newPrice.price) return;
+        const { data, error } = await supabase.from('raffle_prices').insert([{
+            raffle_id: id,
+            currency_code: newPrice.currency_code,
+            price: parseFloat(newPrice.price),
+            is_primary: false
+        }]).select();
+
+        if (data) {
+            setPrices([...prices, data[0]]);
+            setNewPrice({ ...newPrice, price: '' });
+        } else {
+            alert('Error creating price: ' + error?.message);
+        }
+    };
+
+    const deletePrice = async (priceId: string) => {
+        if (!confirm('¿Eliminar precio?')) return;
+        await supabase.from('raffle_prices').delete().eq('id', priceId);
+        setPrices(prices.filter(p => p.id !== priceId));
+    };
+
+    const togglePrimaryPrice = async (priceId: string) => {
+        // Set all local false, one true
+        const newPrices = prices.map(p => ({ ...p, is_primary: p.id === priceId }));
+        setPrices(newPrices);
+
+        // Update DB
+        // 1. Reset all
+        await supabase.from('raffle_prices').update({ is_primary: false }).eq('raffle_id', id);
+        // 2. Set new primary
+        await supabase.from('raffle_prices').update({ is_primary: true }).eq('id', priceId);
     };
 
     const toggleMultiTicket = async () => {
@@ -120,6 +174,39 @@ export default function AdminRaffleDetails() {
         }
     };
 
+    // Winner Logic
+    const handleSpin = () => {
+        const paidTickets = tickets.filter(t => t.status === 'paid');
+        if (paidTickets.length === 0) return alert('No hay tickets pagados para sortear.');
+
+        setIsSpinning(true);
+        setWinner(null);
+
+        // Animation loop
+        const interval = setInterval(() => {
+            const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+            setDisplayNumber(random);
+        }, 50);
+
+        // Stop and pick winner
+        setTimeout(() => {
+            clearInterval(interval);
+            const randomIndex = Math.floor(Math.random() * paidTickets.length);
+            const luckyTicket = paidTickets[randomIndex];
+
+            setDisplayNumber(luckyTicket.ticket_number.toString().padStart(4, '0'));
+            setWinner(luckyTicket);
+            setIsSpinning(false);
+
+            confetti({
+                particleCount: 200,
+                spread: 100,
+                origin: { y: 0.6 }
+            });
+
+        }, 3000);
+    };
+
     const handleUpdateRaffle = async () => {
         if (!editForm.title || !editForm.price) return alert('Título y Precio son obligatorios');
         setUpdating(true);
@@ -139,6 +226,42 @@ export default function AdminRaffleDetails() {
         } finally {
             setUpdating(false);
         }
+    };
+
+    const handleExportCSV = () => {
+        if (tickets.length === 0) return alert('No hay tickets para exportar.');
+
+        // Define headers
+        const headers = ['Ticket Number', 'Status', 'Client Name', 'Client Phone', 'Client ID', 'Client Email', 'Price Paid', 'Payment Method', 'Date'];
+
+        // Map rows
+        const rows = tickets.map(t => [
+            t.ticket_number,
+            t.status,
+            `"${t.client_name || ''}"`,
+            t.client_phone || '',
+            t.client_id_number || '',
+            t.client_email || '',
+            t.price_paid || 0,
+            t.payment_method || '',
+            new Date(t.created_at).toLocaleString()
+        ]);
+
+        // Combine
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(r => r.join(','))
+        ].join('\n');
+
+        // Create Blob and Link
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `sales_raffle_${id}_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     // Group Tickets by Client (Name + Phone) to Handle Multi-Ticket Orders
@@ -200,9 +323,29 @@ export default function AdminRaffleDetails() {
     return (
         <div>
             {/* Header */}
-            <Link to="/admin/raffles" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#64748b', marginBottom: '1rem' }}>
-                <ArrowLeft size={18} /> Volver a Rifas
-            </Link>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <Link to="/admin/raffles" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#64748b' }}>
+                    <ArrowLeft size={18} /> Volver a Rifas
+                </Link>
+                <button
+                    onClick={() => setShowWinnerModal(true)}
+                    style={{
+                        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                        color: 'white',
+                        border: 'none',
+                        padding: '0.6rem 1.2rem',
+                        borderRadius: '0.5rem',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.4)'
+                    }}
+                >
+                    <Trophy size={18} /> Sortear Ganador
+                </button>
+            </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
                 {/* Main Info Card */}
@@ -229,9 +372,20 @@ export default function AdminRaffleDetails() {
                                 </>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                    <input value={editForm.title} onChange={e => setEditForm({ ...editForm, title: e.target.value })} placeholder="Título" style={inputStyle} />
-                                    <textarea value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} placeholder="Descripción" style={{ ...inputStyle, height: '80px' }} />
-                                    <input value={editForm.price} onChange={e => setEditForm({ ...editForm, price: e.target.value })} placeholder="Precio" type="number" style={inputStyle} />
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.85rem', color: '#64748b', marginBottom: '0.3rem', fontWeight: 'bold' }}>Título de la Rifa</label>
+                                        <input value={editForm.title} onChange={e => setEditForm({ ...editForm, title: e.target.value })} placeholder="Ej: Gran Rifa 2024" style={inputStyle} />
+                                    </div>
+
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.85rem', color: '#64748b', marginBottom: '0.3rem', fontWeight: 'bold' }}>Descripción</label>
+                                        <textarea value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} placeholder="Detalles del premio..." style={{ ...inputStyle, height: '80px' }} />
+                                    </div>
+
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.85rem', color: '#64748b', marginBottom: '0.3rem', fontWeight: 'bold' }}>Precio Base (USD)</label>
+                                        <input value={editForm.price} onChange={e => setEditForm({ ...editForm, price: e.target.value })} placeholder="0.00" type="number" style={inputStyle} />
+                                    </div>
 
                                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                                         <div style={{ position: 'relative', overflow: 'hidden' }}>
@@ -292,16 +446,71 @@ export default function AdminRaffleDetails() {
                             <button type="submit" className="btn" style={{ background: '#2563eb', color: 'white', padding: '0.5rem' }}>Guardar</button>
                         </form>
                     )}
+
+                    <hr style={{ margin: '2rem 0', border: 0, borderTop: '1px solid #e2e8f0' }} />
+
+                    <h4 style={{ margin: '0 0 0.5rem 0', color: '#475569', fontSize: '0.9rem' }}>Precios por Moneda</h4>
+                    <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '1rem' }}>Define el precio exacto para cada moneda. Marca una como principal (⭐) para mostrarla grande.</p>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {prices.map(p => {
+                            const currency = currencies.find(c => c.code === p.currency_code);
+                            return (
+                                <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', background: p.is_primary ? '#f0fdf4' : '#f8fafc', borderRadius: '0.5rem', border: p.is_primary ? '1px solid #86efac' : '1px solid transparent' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <button onClick={() => togglePrimaryPrice(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: p.is_primary ? 1 : 0.3, fontSize: '1.2rem' }} title="Marcar como principal">
+                                            ⭐
+                                        </button>
+                                        <div>
+                                            <span style={{ fontWeight: 'bold', fontSize: '0.9rem', display: 'block' }}>{currency?.symbol} {p.price.toLocaleString()} {p.currency_code}</span>
+                                            {currency && <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{currency.name}</span>}
+                                        </div>
+                                    </div>
+                                    <button onClick={() => deletePrice(p.id)} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer' }}>✕</button>
+                                </div>
+                            );
+                        })}
+
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                            <select
+                                value={newPrice.currency_code}
+                                onChange={e => setNewPrice({ ...newPrice, currency_code: e.target.value })}
+                                style={{ ...inputStyle, padding: '0.4rem', fontSize: '0.85rem' }}
+                            >
+                                {currencies.map(c => <option key={c.id} value={c.code}>{c.code} - {c.name}</option>)}
+                            </select>
+                            <input
+                                type="number"
+                                placeholder="Precio"
+                                value={newPrice.price}
+                                onChange={e => setNewPrice({ ...newPrice, price: e.target.value })}
+                                style={{ ...inputStyle, padding: '0.4rem', fontSize: '0.85rem' }}
+                            />
+                            <button onClick={addPrice} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '0.5rem', padding: '0 0.8rem', cursor: 'pointer' }}>+</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             {/* TABS DE GESTIÓN */}
-            <h3 style={{ color: '#334155', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '2rem' }}>
-                📋 Gestión de Ventas
-                <span style={{ fontSize: '0.8rem', background: '#e2e8f0', padding: '0.2rem 0.5rem', borderRadius: '99px', color: '#64748b' }}>
-                    Agrupado por Cliente
-                </span>
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2rem' }}>
+                <h3 style={{ color: '#334155', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                    📋 Gestión de Ventas
+                    <span style={{ fontSize: '0.8rem', background: '#e2e8f0', padding: '0.2rem 0.5rem', borderRadius: '99px', color: '#64748b' }}>
+                        Agrupado por Cliente
+                    </span>
+                </h3>
+                <button
+                    onClick={handleExportCSV}
+                    style={{
+                        background: 'white', border: '1px solid #cbd5e1', color: '#475569',
+                        padding: '0.4rem 0.8rem', borderRadius: '0.5rem', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', fontWeight: 'bold'
+                    }}
+                >
+                    <Download size={16} /> Exportar CSV
+                </button>
+            </div>
 
             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', background: '#f1f5f9', padding: '0.3rem', borderRadius: '0.8rem', width: 'fit-content' }}>
                 <button
@@ -410,7 +619,63 @@ export default function AdminRaffleDetails() {
                     </table>
                 )}
             </div>
-        </div>
+            {/* WINNER MODAL */}
+            {showWinnerModal && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
+                    backdropFilter: 'blur(5px)'
+                }}>
+                    <div style={{ background: '#1e293b', padding: '3rem', borderRadius: '2rem', width: '90%', maxWidth: '500px', textAlign: 'center', color: 'white', border: '1px solid #334155', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+                        <h2 style={{ fontSize: '2rem', marginBottom: '2rem', background: '-webkit-linear-gradient(45deg, #fbbf24, #d97706)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                            🎰 Gran Sorteo
+                        </h2>
+
+                        <div style={{
+                            fontSize: '5rem', fontWeight: 'bold', fontFamily: 'monospace',
+                            background: '#0f172a', padding: '1.5rem', borderRadius: '1rem',
+                            marginBottom: '2rem', border: '2px solid #334155', letterSpacing: '8px',
+                            color: isSpinning ? '#e2e8f0' : '#fbbf24',
+                            textShadow: isSpinning ? 'none' : '0 0 20px rgba(251, 191, 36, 0.5)'
+                        }}>
+                            {displayNumber}
+                        </div>
+
+                        {winner && (
+                            <div style={{ marginBottom: '2rem', animation: 'scaleIn 0.5s' }}>
+                                <p style={{ color: '#94a3b8', margin: 0 }}>¡Felicidades al Ticket Ganador!</p>
+                                <h3 style={{ fontSize: '1.5rem', margin: '0.5rem 0', color: '#fff' }}>{winner.client_name}</h3>
+                                <p style={{ color: '#fbbf24' }}>{winner.client_phone}</p>
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                            <button
+                                onClick={() => setShowWinnerModal(false)}
+                                style={{ background: 'transparent', border: '1px solid #475569', color: '#94a3b8', padding: '0.8rem 2rem', borderRadius: '0.5rem', cursor: 'pointer' }}
+                            >
+                                Cerrar
+                            </button>
+                            {!winner && (
+                                <button
+                                    onClick={handleSpin}
+                                    disabled={isSpinning}
+                                    style={{
+                                        background: '#10b981', color: 'white', border: 'none',
+                                        padding: '0.8rem 2rem', borderRadius: '0.5rem', cursor: 'pointer',
+                                        fontWeight: 'bold', fontSize: '1.1rem',
+                                        display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                        opacity: isSpinning ? 0.7 : 1
+                                    }}
+                                >
+                                    {isSpinning ? 'Girando...' : <><Play size={20} fill="white" /> Girar</>}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div >
     );
 }
 

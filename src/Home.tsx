@@ -17,27 +17,40 @@ export default function Home() {
 
     const fetchRaffles = async () => {
         setLoading(true);
-        // Fetch raffles and tickets (only minimal fields from tickets for counting)
         const { data: rafflesData } = await supabase.from('raffles').select('*, tickets(status)').eq('status', 'on_sale');
         const { data: currenciesData } = await supabase.from('currencies').select('*').eq('is_active', true);
+        const { data: pricesData } = await supabase.from('raffle_prices').select('*');
 
         if (currenciesData) setCurrencies(currenciesData);
 
         if (rafflesData) {
-            // Calculate progress manually
             const rafflesWithCount = rafflesData.map((r: any) => {
                 const soldCount = r.tickets ? r.tickets.filter((t: any) => t.status === 'paid' || t.status === 'reserved').length : 0;
-                return { ...r, soldCount };
+                const manual_prices = pricesData ? pricesData.filter((p: any) => p.raffle_id === r.id) : [];
+                return { ...r, soldCount, manual_prices };
             });
             setRaffles(rafflesWithCount);
         }
         setLoading(false);
     };
 
-    const formatPrice = (usdAmount: number) => {
-        if (!currencies.length) return usdAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    const formatPrice = (raffle: any) => {
+        // 1. Try Manual Prices
+        if (raffle.manual_prices && raffle.manual_prices.length > 0) {
+            const primary = raffle.manual_prices.find((p: any) => p.is_primary);
+            const others = raffle.manual_prices.filter((p: any) => !p.is_primary);
+
+            const parts = [];
+            if (primary) parts.push(`${primary.currency_code} ${primary.price.toLocaleString()}`);
+            others.forEach((p: any) => parts.push(`${p.currency_code} ${p.price.toLocaleString()}`));
+
+            if (parts.length > 0) return parts.join(' / ');
+        }
+
+        // 2. Fallback to Auto-Conversion (Legacy)
+        if (!currencies.length) return `$${raffle.price} USD`;
         return currencies.map(c => {
-            const val = usdAmount * c.rate;
+            const val = raffle.price * c.rate;
             return new Intl.NumberFormat('es-VE', { style: 'currency', currency: c.code, maximumFractionDigits: 2 }).format(val);
         }).join(' / ');
     };
@@ -114,7 +127,7 @@ export default function Home() {
                                             <div>
                                                 <span style={{ display: 'block', fontSize: '0.8rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 'bold' }}>Valor Ticket</span>
                                                 <span style={{ fontSize: '1.4rem', fontWeight: '800', color: '#059669', letterSpacing: '-0.5px' }}>
-                                                    {formatPrice(raffle.price)}
+                                                    {formatPrice(raffle)}
                                                 </span>
                                             </div>
                                             <Link to={`/checkout/${raffle.id}`} className="btn" style={{

@@ -6,13 +6,17 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminContent from './pages/AdminContent';
 import AdminRaffles from './pages/AdminRaffles';
 import AdminRaffleDetails from './pages/AdminRaffleDetails';
+import AdminCurrencies from './pages/AdminCurrencies';
 import Login from './pages/Login';
 
 import Home from './Home';
 
+import SalesToast from './components/SalesToast';
+
 function App() {
   return (
     <HashRouter>
+      <SalesToast />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/mis-tickets" element={<MyTickets />} />
@@ -25,6 +29,7 @@ function App() {
           <Route path="raffles" element={<AdminRaffles />} />
           <Route path="raffles/:id" element={<AdminRaffleDetails />} />
           <Route path="content" element={<AdminContent />} />
+          <Route path="currencies" element={<AdminCurrencies />} />
         </Route>
       </Routes>
     </HashRouter>

@@ -13,6 +13,7 @@ export default function Checkout() {
     // Multi-ticket State
     const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
     const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+    const [rafflePrices, setRafflePrices] = useState<any[]>([]);
 
     const [buying, setBuying] = useState(false);
     const [previewNumber, setPreviewNumber] = useState<number | null>(null);
@@ -67,11 +68,14 @@ export default function Checkout() {
         supabase.from('payment_methods').select('*').eq('raffle_id', id)
             .then(({ data }) => setPaymentMethods(data || []));
 
-        // 4. Fetch Currencies
+        // 4. Fetch Currencies & Prices
         supabase.from('currencies').select('*').eq('is_active', true)
             .then(({ data }) => {
                 if (data) setCurrencies(data);
             });
+
+        supabase.from('raffle_prices').select('*').eq('raffle_id', id)
+            .then(({ data }) => setRafflePrices(data || []));
 
         // 5. Setup Realtime Subscription
         const channel = supabase
@@ -103,6 +107,19 @@ export default function Checkout() {
     }, [id]);
 
     const formatPrice = (usdAmount: number) => {
+        // If raffle is loaded, check for manual prices
+        if (raffle && rafflePrices.length > 0) {
+            const count = usdAmount / raffle.price; // Reverse engineer count from total usdAmount
+            const primary = rafflePrices.find(p => p.is_primary);
+            const others = rafflePrices.filter(p => !p.is_primary);
+
+            const parts = [];
+            if (primary) parts.push(`${primary.currency_code} ${(primary.price * count).toLocaleString()}`);
+            others.forEach(p => parts.push(`${p.currency_code} ${(p.price * count).toLocaleString()}`));
+
+            return parts.join(' / ');
+        }
+
         if (!currencies.length) return usdAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 
         return currencies.map(c => {
