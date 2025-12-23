@@ -80,16 +80,16 @@ export default function Checkout() {
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'tickets', filter: `raffle_id=eq.${id}` },
                 (payload) => {
-                    if (payload.event === 'INSERT' || payload.event === 'UPDATE') {
+                    if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
                         const newTicket = payload.new as any;
                         setTicketStatuses(prev => ({
                             ...prev,
                             [newTicket.ticket_number]: newTicket.status
                         }));
-                        if (payload.event === 'INSERT') {
+                        if (payload.eventType === 'INSERT') {
                             setSoldTickets(prev => [...prev, newTicket.ticket_number]);
                         }
-                    } else if (payload.event === 'DELETE') {
+                    } else if (payload.eventType === 'DELETE') {
                         // For safe deletion handling, we refetch as 'old' might not contain ticket_number
                         fetchTickets();
                     }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { ArrowLeft, Phone, Edit2, Save, X, Camera, CheckCircle, ExternalLink, Ticket } from 'lucide-react';
+import { ArrowLeft, Phone, Edit2, CheckCircle, ExternalLink, Ticket } from 'lucide-react';
 
 export default function AdminRaffleDetails() {
     const { id } = useParams();
@@ -58,7 +58,7 @@ export default function AdminRaffleDetails() {
         try {
             const newValue = !config.allow_multi_ticket;
             setConfig({ ...config, allow_multi_ticket: newValue });
-            const { data, error } = await supabase.from('raffles').update({ allow_multi_ticket: newValue }).eq('id', id).select();
+            const { error } = await supabase.from('raffles').update({ allow_multi_ticket: newValue }).eq('id', id).select();
             if (error) throw error;
         } catch (error: any) {
             alert('Error: ' + error.message);
@@ -281,6 +281,14 @@ export default function AdminRaffleDetails() {
                             <input placeholder="Banco" value={newMethod.bank_name} onChange={e => setNewMethod({ ...newMethod, bank_name: e.target.value })} style={inputStyle} required />
                             <input placeholder="Nro Cuenta" value={newMethod.account_number} onChange={e => setNewMethod({ ...newMethod, account_number: e.target.value })} style={inputStyle} required />
                             <input placeholder="Titular" value={newMethod.account_owner} onChange={e => setNewMethod({ ...newMethod, account_owner: e.target.value })} style={inputStyle} />
+
+                            <div style={{ padding: '0.5rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px dashed #cbd5e1' }}>
+                                <label style={{ display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.3rem' }}>Logo del Banco o QR</label>
+                                <input type="file" accept="image/*" onChange={handleMethodImageUpload} style={{ fontSize: '0.8rem', width: '100%' }} />
+                                {uploadingImage && <span style={{ fontSize: '0.8rem', color: '#2563eb' }}>Subiendo...</span>}
+                                {newMethod.image_url && <img src={newMethod.image_url} alt="Vista previa" style={{ marginTop: '0.5rem', height: '40px', borderRadius: '4px' }} />}
+                            </div>
+
                             <button type="submit" className="btn" style={{ background: '#2563eb', color: 'white', padding: '0.5rem' }}>Guardar</button>
                         </form>
                     )}
