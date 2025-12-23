@@ -9,9 +9,17 @@ export default function AdminRaffles() {
     const [formData, setFormData] = useState({ title: '', price: '', description: '', image_url: '', currency: 'USD' });
     const [uploading, setUploading] = useState(false);
 
+    const [currencies, setCurrencies] = useState<any[]>([]);
+
     useEffect(() => {
         fetchRaffles();
+        fetchCurrencies();
     }, []);
+
+    const fetchCurrencies = async () => {
+        const { data } = await supabase.from('currencies').select('*').eq('is_active', true);
+        setCurrencies(data || []);
+    };
 
     const fetchRaffles = async () => {
         const { data } = await supabase.from('raffles').select('*').order('created_at', { ascending: false });
@@ -120,11 +128,15 @@ export default function AdminRaffles() {
                             <select
                                 value={formData.currency || 'USD'}
                                 onChange={e => setFormData({ ...formData, currency: e.target.value })}
-                                style={{ ...inputStyle, width: '100px', fontWeight: 'bold' }}
+                                style={{ ...inputStyle, width: '120px', fontWeight: 'bold' }}
                             >
-                                <option value="USD">USD ($)</option>
-                                <option value="VES">Bs (VES)</option>
-                                <option value="COP">COP ($)</option>
+                                {currencies.length > 0 ? (
+                                    currencies.map(c => (
+                                        <option key={c.id} value={c.code}>{c.code} ({c.symbol})</option>
+                                    ))
+                                ) : (
+                                    <option value="USD">USD ($)</option>
+                                )}
                             </select>
                         </div>
 

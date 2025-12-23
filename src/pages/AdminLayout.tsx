@@ -104,6 +104,10 @@ export default function AdminLayout() {
                     <Ticket size={24} />
                     <span>Rifas</span>
                 </Link>
+                <Link to="/admin/currencies" className={isActive('/admin/currencies') ? 'active' : ''}>
+                    <Coins size={24} />
+                    <span>Monedas</span>
+                </Link>
                 <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: '#64748b', display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '0.75rem', gap: '0.2rem' }}>
                     <LogOut size={24} />
                     <span>Salir</span>

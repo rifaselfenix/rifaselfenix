@@ -6,7 +6,7 @@ export default function AdminCurrencies() {
     const [currencies, setCurrencies] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
-    const [newCurrency, setNewCurrency] = useState({ code: '', name: '', symbol: '' });
+    const [newCurrency, setNewCurrency] = useState({ code: '', name: '', symbol: '', rate: '' });
 
     useEffect(() => {
         fetchCurrencies();
@@ -27,13 +27,14 @@ export default function AdminCurrencies() {
             code: newCurrency.code.toUpperCase(),
             name: newCurrency.name,
             symbol: newCurrency.symbol,
+            rate: parseFloat(newCurrency.rate || '1'),
             is_active: true
         }]);
 
         if (error) {
             alert('Error: ' + error.message);
         } else {
-            setNewCurrency({ code: '', name: '', symbol: '' });
+            setNewCurrency({ code: '', name: '', symbol: '', rate: '' });
             setShowForm(false);
             fetchCurrencies();
         }
@@ -83,13 +84,23 @@ export default function AdminCurrencies() {
                             />
                         </div>
                         <div style={{ flex: 1, minWidth: '80px' }}>
-                            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.3rem' }}>Símbolo (ej: $)</label>
+                            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.3rem' }}>Símbolo</label>
                             <input
                                 value={newCurrency.symbol}
                                 onChange={e => setNewCurrency({ ...newCurrency, symbol: e.target.value })}
                                 placeholder="$"
                                 style={inputStyle}
                                 required
+                            />
+                        </div>
+                        <div style={{ flex: 1, minWidth: '100px' }}>
+                            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.3rem' }}>Tasa (Base USD)</label>
+                            <input
+                                type="number"
+                                value={newCurrency.rate}
+                                onChange={e => setNewCurrency({ ...newCurrency, rate: e.target.value })}
+                                placeholder="1.0"
+                                style={inputStyle}
                             />
                         </div>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -107,6 +118,7 @@ export default function AdminCurrencies() {
                             <th style={{ padding: '1rem', textAlign: 'left', color: '#64748b' }}>Código</th>
                             <th style={{ padding: '1rem', textAlign: 'left', color: '#64748b' }}>Nombre</th>
                             <th style={{ padding: '1rem', textAlign: 'center', color: '#64748b' }}>Símbolo</th>
+                            <th style={{ padding: '1rem', textAlign: 'center', color: '#64748b' }}>Tasa</th>
                             <th style={{ padding: '1rem', textAlign: 'right', color: '#64748b' }}>Acciones</th>
                         </tr>
                     </thead>
@@ -116,6 +128,7 @@ export default function AdminCurrencies() {
                                 <td style={{ padding: '1rem', fontWeight: 'bold', color: '#334155' }}>{c.code}</td>
                                 <td style={{ padding: '1rem', color: '#475569' }}>{c.name}</td>
                                 <td style={{ padding: '1rem', textAlign: 'center', fontSize: '1.2rem', fontWeight: 'bold' }}>{c.symbol}</td>
+                                <td style={{ padding: '1rem', textAlign: 'center' }}>{c.rate}</td>
                                 <td style={{ padding: '1rem', textAlign: 'right' }}>
                                     <button onClick={() => handleDelete(c.id)} style={{ background: '#fee2e2', color: '#dc2626', border: 'none', padding: '0.4rem', borderRadius: '0.4rem', cursor: 'pointer' }}>
                                         <Trash2 size={16} />
