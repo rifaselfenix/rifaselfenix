@@ -60,7 +60,8 @@ async function simulate() {
             client_id_number: `${Math.floor(Math.random() * 30000000)}`,
             payment_method: randomMethod,
             status: 'paid', // Directamente pagado para ver $$ en dashboard
-            payment_receipt_url: 'http://via.placeholder.com/150'
+            payment_receipt_url: 'http://via.placeholder.com/150',
+            created_at: new Date().toISOString()
         });
 
         if (error) {

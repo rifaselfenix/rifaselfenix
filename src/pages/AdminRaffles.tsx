@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 export default function AdminRaffles() {
     const [raffles, setRaffles] = useState<any[]>([]);
     const [showForm, setShowForm] = useState(false);
-    const [formData, setFormData] = useState({ title: '', price: '', description: '', image_url: '' });
+    const [formData, setFormData] = useState({ title: '', price: '', description: '', image_url: '', currency: 'USD' });
     const [uploading, setUploading] = useState(false);
 
     useEffect(() => {
@@ -61,7 +61,7 @@ export default function AdminRaffles() {
 
         if (!error) {
             setShowForm(false);
-            setFormData({ title: '', price: '', description: '', image_url: '' });
+            setFormData({ title: '', price: '', description: '', image_url: '', currency: 'USD' });
             fetchRaffles();
         } else {
             alert('Error creando rifa: ' + error.message);
@@ -109,13 +109,24 @@ export default function AdminRaffles() {
                             onChange={e => setFormData({ ...formData, description: e.target.value })}
                             style={inputStyle}
                         />
-                        <input
-                            type="number"
-                            placeholder="Precio del Ticket ($)"
-                            value={formData.price}
-                            onChange={e => setFormData({ ...formData, price: e.target.value })}
-                            style={inputStyle}
-                        />
+                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                            <input
+                                type="number"
+                                placeholder="Precio del Ticket"
+                                value={formData.price}
+                                onChange={e => setFormData({ ...formData, price: e.target.value })}
+                                style={{ ...inputStyle, flex: 1 }}
+                            />
+                            <select
+                                value={formData.currency || 'USD'}
+                                onChange={e => setFormData({ ...formData, currency: e.target.value })}
+                                style={{ ...inputStyle, width: '100px', fontWeight: 'bold' }}
+                            >
+                                <option value="USD">USD ($)</option>
+                                <option value="VES">Bs (VES)</option>
+                                <option value="COP">COP ($)</option>
+                            </select>
+                        </div>
 
                         {/* Image Fields */}
                         <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
