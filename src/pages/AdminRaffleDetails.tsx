@@ -1,13 +1,145 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { ArrowLeft, Phone, User, Calendar, Ticket, Edit2, Save, X, Camera, CheckCircle, ExternalLink, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Phone, Edit2, Save, X, Camera, CheckCircle, ExternalLink, Ticket } from 'lucide-react';
 
 export default function AdminRaffleDetails() {
     const { id } = useParams();
     const [raffle, setRaffle] = useState<any>(null);
     const [tickets, setTickets] = useState<any[]>([]);
     const [ticketTab, setTicketTab] = useState<'pending' | 'paid'>('pending');
+
+    // Config States
+    const [config, setConfig] = useState({ allow_multi_ticket: false });
+    const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+
+    // Form States
+    const [newMethod, setNewMethod] = useState({ bank_name: '', account_number: '', account_type: '', account_owner: '', image_url: '' });
+    const [showMethodForm, setShowMethodForm] = useState(false);
+    const [uploadingImage, setUploadingImage] = useState(false);
+
+    // Edit Raffle States
+    const [isEditing, setIsEditing] = useState(false);
+    const [editForm, setEditForm] = useState({ title: '', description: '', price: '', image_url: '' });
+    const [updating, setUpdating] = useState(false);
+
+    useEffect(() => {
+        if (id) loadData();
+    }, [id]);
+
+    const loadData = async () => {
+        // 1. Cargar Rifa
+        const { data: raffleData } = await supabase.from('raffles').select('*').eq('id', id).single();
+        setRaffle(raffleData);
+        if (raffleData) {
+            setConfig({ allow_multi_ticket: raffleData.allow_multi_ticket || false });
+            setEditForm({
+                title: raffleData.title,
+                description: raffleData.description || '',
+                price: raffleData.price,
+                image_url: raffleData.image_url || ''
+            });
+        }
+
+        // 2. Cargar Tickets Vendidos
+        const { data: ticketsData } = await supabase
+            .from('tickets')
+            .select('*')
+            .eq('raffle_id', id)
+            .order('ticket_number', { ascending: true });
+        setTickets(ticketsData || []);
+
+        // 3. Cargar Métodos de Pago
+        const { data: methods } = await supabase.from('payment_methods').select('*').eq('raffle_id', id);
+        setPaymentMethods(methods || []);
+    };
+
+    const toggleMultiTicket = async () => {
+        try {
+            const newValue = !config.allow_multi_ticket;
+            setConfig({ ...config, allow_multi_ticket: newValue });
+            const { data, error } = await supabase.from('raffles').update({ allow_multi_ticket: newValue }).eq('id', id).select();
+            if (error) throw error;
+        } catch (error: any) {
+            alert('Error: ' + error.message);
+            setConfig({ ...config, allow_multi_ticket: !config.allow_multi_ticket });
+        }
+    };
+
+    const handleMethodImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || e.target.files.length === 0) return;
+        setUploadingImage(true);
+        const file = e.target.files[0];
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `bank-${Date.now()}.${fileExt}`;
+            const filePath = `payment-methods/${fileName}`;
+            const { error: uploadError } = await supabase.storage.from('images').upload(filePath, file);
+            if (uploadError) throw uploadError;
+            const { data } = supabase.storage.from('images').getPublicUrl(filePath);
+            setNewMethod(prev => ({ ...prev, image_url: data.publicUrl }));
+        } catch (error: any) {
+            alert('Error subiendo logo: ' + error.message);
+        } finally {
+            setUploadingImage(false);
+        }
+    };
+
+    const addPaymentMethod = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const { data } = await supabase.from('payment_methods').insert([{ raffle_id: id, ...newMethod }]).select();
+        if (data) {
+            setPaymentMethods([...paymentMethods, data[0]]);
+            setShowMethodForm(false);
+            setNewMethod({ bank_name: '', account_number: '', account_type: '', account_owner: '', image_url: '' });
+        }
+    };
+
+    const deleteMethod = async (methodId: string) => {
+        if (!confirm('¿Eliminar método?')) return;
+        await supabase.from('payment_methods').delete().eq('id', methodId);
+        setPaymentMethods(paymentMethods.filter(m => m.id !== methodId));
+    };
+
+    const handleEditImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || e.target.files.length === 0) return;
+        const file = e.target.files[0];
+        setUpdating(true);
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `raffle-edit-${Date.now()}.${fileExt}`;
+            const filePath = `raffle-images/${fileName}`;
+            const { error: uploadError } = await supabase.storage.from('images').upload(filePath, file);
+            if (uploadError) throw uploadError;
+            const { data } = supabase.storage.from('images').getPublicUrl(filePath);
+            setEditForm(prev => ({ ...prev, image_url: data.publicUrl }));
+        } catch (error: any) {
+            alert('Error subiendo imagen: ' + error.message);
+        } finally {
+            setUpdating(false);
+        }
+    };
+
+    const handleUpdateRaffle = async () => {
+        if (!editForm.title || !editForm.price) return alert('Título y Precio son obligatorios');
+        setUpdating(true);
+        try {
+            const { error } = await supabase.from('raffles').update({
+                title: editForm.title,
+                description: editForm.description,
+                price: parseFloat(editForm.price as any),
+                image_url: editForm.image_url
+            }).eq('id', id);
+            if (error) throw error;
+            setRaffle({ ...raffle, ...editForm });
+            setIsEditing(false);
+            alert("✅ Cambios guardados.");
+        } catch (error: any) {
+            alert('Error actualizando: ' + error.message);
+        } finally {
+            setUpdating(false);
+        }
+    };
 
     // Group Tickets by Client (Name + Phone) to Handle Multi-Ticket Orders
     const groupedTickets = tickets.reduce((acc: any[], ticket) => {
@@ -63,9 +195,11 @@ export default function AdminRaffleDetails() {
         }
     };
 
+    if (!raffle) return <div style={{ padding: '2rem' }}>Cargando...</div>;
+
     return (
         <div>
-            {/* Header and Config Code Remains Same... */}
+            {/* Header */}
             <Link to="/admin/raffles" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: '#64748b', marginBottom: '1rem' }}>
                 <ArrowLeft size={18} /> Volver a Rifas
             </Link>
@@ -122,7 +256,7 @@ export default function AdminRaffleDetails() {
                     </div>
                 </div>
 
-                {/* Config Card (Shortened for brevity but functionality preserved) */}
+                {/* Config Card */}
                 <div style={{ background: 'white', padding: '1.5rem', borderRadius: '1rem', border: '1px solid #e2e8f0' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                         <h3 style={{ margin: 0, color: '#334155' }}>⚙️ Config</h3>
@@ -154,7 +288,7 @@ export default function AdminRaffleDetails() {
             </div>
 
             {/* TABS DE GESTIÓN */}
-            <h3 style={{ color: '#334155', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <h3 style={{ color: '#334155', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '2rem' }}>
                 📋 Gestión de Ventas
                 <span style={{ fontSize: '0.8rem', background: '#e2e8f0', padding: '0.2rem 0.5rem', borderRadius: '99px', color: '#64748b' }}>
                     Agrupado por Cliente
@@ -171,7 +305,7 @@ export default function AdminRaffleDetails() {
                         boxShadow: ticketTab === 'pending' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
                     }}
                 >
-                    🟡 Por Revisar
+                    🟡 Por Revisar ({tickets.filter(t => t.status === 'reserved').length})
                 </button>
                 <button
                     onClick={() => setTicketTab('paid')}
@@ -182,7 +316,7 @@ export default function AdminRaffleDetails() {
                         boxShadow: ticketTab === 'paid' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
                     }}
                 >
-                    🟢 Aprobados / Pagados
+                    🟢 Aprobados / Pagados ({tickets.filter(t => t.status === 'paid').length})
                 </button>
             </div>
 
@@ -191,7 +325,7 @@ export default function AdminRaffleDetails() {
                 {groupedTickets.length === 0 ? (
                     <div style={{ padding: '4rem', textAlign: 'center', color: '#94a3b8' }}>
                         <Ticket size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
-                        <p>No hay solicitudes en esta sección.</p>
+                        <p>{ticketTab === 'pending' ? 'No hay pagos por revisar.' : 'No hay ventas confirmadas.'}</p>
                     </div>
                 ) : (
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
@@ -273,4 +407,3 @@ export default function AdminRaffleDetails() {
 }
 
 const inputStyle = { padding: '0.8rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', fontSize: '0.95rem', width: '100%', boxSizing: 'border-box' as const };
-
