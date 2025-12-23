@@ -8,6 +8,7 @@ export default function Checkout() {
     const { id } = useParams();
     const [raffle, setRaffle] = useState<any>(null);
     const [soldTickets, setSoldTickets] = useState<number[]>([]);
+    const [ticketStatuses, setTicketStatuses] = useState<Record<number, 'reserved' | 'paid'>>({});
 
     // Multi-ticket State
     const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
@@ -15,11 +16,11 @@ export default function Checkout() {
 
     const [buying, setBuying] = useState(false);
     const [previewNumber, setPreviewNumber] = useState<number | null>(null);
-    const [conversionRate, setConversionRate] = useState<number>(0);
     const [selectedPayment, setSelectedPayment] = useState<any>(null);
+    const [currencies, setCurrencies] = useState<any[]>([]);
 
     // --- User Form States ---
-    const [userDetails, setUserDetails] = useState({ name: '', phone: '', idNumber: '' });
+    const [userDetails, setUserDetails] = useState({ name: '', phone: '', email: '', idNumber: '' });
     const [showUserForm, setShowUserForm] = useState(false);
     const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
@@ -29,47 +30,92 @@ export default function Checkout() {
     const totalNumbers = 10000;
     const [searchTerm, setSearchTerm] = useState('');
 
-    // --- Machine States (Simplified for single pick for now) ---
+    // --- Machine States (Single) ---
     const [spinning, setSpinning] = useState(false);
     const [slots, setSlots] = useState([0, 0, 0, 0]);
+
+    // --- Advanced Roulette State ---
+    const [showRouletteModal, setShowRouletteModal] = useState(false);
+    const [rouletteCount, setRouletteCount] = useState(5);
+    const [rouletteResults, setRouletteResults] = useState<number[]>([]);
+    const [rouletteSpinning, setRouletteSpinning] = useState(false);
 
     useEffect(() => {
         if (!id) return;
 
-        // 1. Fetch Raffle & Global Settings
+        // 1. Fetch Raffle
         supabase.from('raffles').select('*').eq('id', id).single()
             .then(({ data }) => setRaffle(data));
 
-        supabase.from('tickets').select('ticket_number').eq('raffle_id', id)
-            .then(({ data }) => {
-                if (data) setSoldTickets(data.map(t => t.ticket_number));
-            });
+        // 2. Fetch Initial Tickets
+        const fetchTickets = () => {
+            supabase.from('tickets').select('ticket_number, status').eq('raffle_id', id)
+                .then(({ data }) => {
+                    if (data) {
+                        const statusMap: Record<number, 'reserved' | 'paid'> = {};
+                        data.forEach((t: any) => {
+                            statusMap[t.ticket_number] = t.status || 'paid';
+                        });
+                        setTicketStatuses(statusMap);
+                        setSoldTickets(data.map(t => t.ticket_number));
+                    }
+                });
+        };
+        fetchTickets();
 
-        // 2. Fetch Payment Methods
+        // 3. Fetch Payment Methods
         supabase.from('payment_methods').select('*').eq('raffle_id', id)
             .then(({ data }) => setPaymentMethods(data || []));
 
-        // 3. Fetch Conversion Rate
-        supabase.from('app_settings').select('value').eq('key', 'conversion_rate_ves').single()
+        // 4. Fetch Currencies
+        supabase.from('currencies').select('*').eq('is_active', true)
             .then(({ data }) => {
-                if (data) setConversionRate(parseFloat(data.value) || 0);
+                if (data) setCurrencies(data);
             });
+
+        // 5. Setup Realtime Subscription
+        const channel = supabase
+            .channel(`tickets-raffle-${id}`)
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'tickets', filter: `raffle_id=eq.${id}` },
+                (payload) => {
+                    if (payload.event === 'INSERT' || payload.event === 'UPDATE') {
+                        const newTicket = payload.new as any;
+                        setTicketStatuses(prev => ({
+                            ...prev,
+                            [newTicket.ticket_number]: newTicket.status
+                        }));
+                        if (payload.event === 'INSERT') {
+                            setSoldTickets(prev => [...prev, newTicket.ticket_number]);
+                        }
+                    } else if (payload.event === 'DELETE') {
+                        // For safe deletion handling, we refetch as 'old' might not contain ticket_number
+                        fetchTickets();
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [id]);
 
     const formatPrice = (usdAmount: number) => {
-        const usd = usdAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-        if (conversionRate > 0) {
-            const ves = (usdAmount * conversionRate).toLocaleString('es-VE', { style: 'currency', currency: 'VES' });
-            return `${usd} / ${ves}`;
-        }
-        return usd;
+        if (!currencies.length) return usdAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+
+        return currencies.map(c => {
+            const val = usdAmount * c.rate;
+            return new Intl.NumberFormat('es-VE', { style: 'currency', currency: c.code, maximumFractionDigits: 2 }).format(val);
+        }).join(' / ');
     };
 
-    // Lógica Lucky Pick (Soporta Multi-ticket via Preview)
+    // --- Single Spin Logic ---
     const spinMachine = () => {
         if (spinning) return;
         setSpinning(true);
-        setPreviewNumber(null); // Clear previous preview while spinning
+        setPreviewNumber(null);
 
         const duration = 1500;
         const interval = setInterval(() => {
@@ -88,7 +134,7 @@ export default function Checkout() {
             do {
                 luckyNumber = Math.floor(Math.random() * 10000);
                 attempts++;
-            } while ((soldTickets.includes(luckyNumber) || selectedNumbers.includes(luckyNumber)) && attempts < 1000);
+            } while ((ticketStatuses[luckyNumber] || selectedNumbers.includes(luckyNumber)) && attempts < 1000);
 
             if (attempts >= 1000) {
                 alert('¡Quedan pocos números disponibles!');
@@ -100,14 +146,12 @@ export default function Checkout() {
             setSlots(digits);
             setPreviewNumber(luckyNumber);
             setSpinning(false);
-            // Confetti for the Reveal
             confetti({ particleCount: 100, spread: 60, origin: { y: 0.6 }, colors: ['#fda4af', '#fcd34d', '#67e8f9'] });
         }, duration);
     };
 
     const addPreviewToCart = () => {
         if (previewNumber === null) return;
-
         if (raffle?.allow_multi_ticket) {
             setSelectedNumbers(prev => [...prev, previewNumber]);
         } else {
@@ -117,18 +161,83 @@ export default function Checkout() {
         confetti({ particleCount: 50, spread: 40, origin: { y: 0.7 } });
     };
 
+    // --- Advanced Roulette Logic ---
+    const getUniqueRandomAvailable = (exclude: number[], count: number) => {
+        const found: number[] = [];
+        let attempts = 0;
+
+        while (found.length < count && attempts < 5000) {
+            const num = Math.floor(Math.random() * 10000);
+            if (!ticketStatuses[num] && !selectedNumbers.includes(num) && !exclude.includes(num) && !found.includes(num)) {
+                found.push(num);
+            }
+            attempts++;
+        }
+        return found;
+    };
+
+    const spinRoulette = async () => {
+        if (rouletteSpinning) return;
+        setRouletteSpinning(true);
+        setRouletteResults([]); // Clear previous
+
+        // Animation effect
+        let iterations = 0;
+        const interval = setInterval(() => {
+            setRouletteResults(Array.from({ length: rouletteCount }, () => Math.floor(Math.random() * 10000)));
+            iterations++;
+            if (iterations > 12) clearInterval(interval);
+        }, 80);
+
+        setTimeout(() => {
+            clearInterval(interval);
+            const newNumbers = getUniqueRandomAvailable([], rouletteCount);
+            setRouletteResults(newNumbers);
+            setRouletteSpinning(false);
+            if (newNumbers.length < rouletteCount) alert('No hay suficientes tickets disponibles.');
+            confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
+        }, 1200);
+    };
+
+    const reSpinSingle = (index: number) => {
+        const current = [...rouletteResults];
+        const exclude = [...current]; // Exclude existing results to avoid dupes in this batch
+        exclude.splice(index, 1); // Remove the one we are replacing from exclusions
+
+        const [newNum] = getUniqueRandomAvailable(exclude, 1);
+        if (newNum !== undefined) {
+            current[index] = newNum;
+            setRouletteResults(current);
+        } else {
+            alert('No hay más tickets disponibles');
+        }
+    };
+
+    const confirmRouletteSelection = () => {
+        if (raffle?.allow_multi_ticket) {
+            setSelectedNumbers(prev => {
+                const newSet = new Set([...prev, ...rouletteResults]);
+                return Array.from(newSet);
+            });
+        } else {
+            // Should not happen as button hidden if multi-ticket invalid, but safety:
+            setSelectedNumbers([rouletteResults[0]]);
+        }
+        setShowRouletteModal(false);
+        setRouletteResults([]);
+    };
+
+    // --- Grid Logic ---
     const toggleNumber = (num: number) => {
-        if (soldTickets.includes(num)) return;
+        if (ticketStatuses[num]) return; // Block valid tickets
 
         if (raffle?.allow_multi_ticket) {
-            // Toggle
             if (selectedNumbers.includes(num)) {
                 setSelectedNumbers(selectedNumbers.filter(n => n !== num));
             } else {
                 setSelectedNumbers([...selectedNumbers, num]);
             }
         } else {
-            // Single select behavior
             setSelectedNumbers([num]);
         }
     };
@@ -148,23 +257,20 @@ export default function Checkout() {
     const handleBuyClick = () => {
         if (!raffle || selectedNumbers.length === 0) return;
         setShowUserForm(true);
-        setSelectedPayment(null); // Reset payment selection
+        setSelectedPayment(null);
     };
 
     const confirmPurchase = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!userDetails.name || !userDetails.phone) return alert('Por favor llena tus datos');
+        if (!userDetails.name || !userDetails.phone || !userDetails.email) return alert('Por favor llena tus datos');
 
         setBuying(true);
         try {
             let receiptUrl = '';
 
-            // 1. Upload Receipt if present
             if (receiptFile) {
                 const fileExt = receiptFile.name.split('.').pop();
                 const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-
-                // Try 'images' bucket first (common across projects), then public
                 let bucketName = 'images';
                 let { error: uploadError } = await supabase.storage.from(bucketName).upload(`receipts/${fileName}`, receiptFile);
 
@@ -178,43 +284,71 @@ export default function Checkout() {
                 receiptUrl = data.publicUrl;
             }
 
-            // 2. Insert Tickets
+            // Insert Tickets with Email
             const ticketsToInsert = selectedNumbers.map(num => ({
                 raffle_id: raffle.id,
                 ticket_number: num,
                 price_paid: raffle.price,
-                client_name: userDetails.name,
-                client_phone: userDetails.phone,
                 client_id_number: userDetails.idNumber,
-                payment_receipt_url: receiptUrl
+                client_email: userDetails.email,
+                payment_method: selectedPayment?.bank_name || 'Manual',
+                payment_receipt_url: receiptUrl,
+                status: 'reserved'
             }));
 
             const { error } = await supabase.from('tickets').insert(ticketsToInsert);
             if (error) throw error;
 
-            // 3. Generate PDFs
+            // Generate, Upload PDF and Notify
+            const ticketLinks: string[] = [];
             const { generateTicketPDF, downloadPDF } = await import('./lib/pdfGenerator');
+            const { sendTicketEmail } = await import('./lib/notifications');
 
-            // Download sequentially to avoid browser blocking
             for (const num of selectedNumbers) {
                 const pdfBytes = await generateTicketPDF({
                     ticketNumber: num,
                     raffleTitle: raffle.title,
                     price: raffle.price,
-                    date: new Date().toLocaleDateString()
+                    date: new Date().toLocaleDateString(),
+                    status: 'reserved'
                 });
+
+                // Download locally
                 downloadPDF(pdfBytes, `Ticket-${num}.pdf`);
+
+                // Upload to Supabase Storage
+                try {
+                    const fileName = `Ticket-${num}-${Date.now()}.pdf`;
+                    const { error: uploadErr } = await supabase.storage
+                        .from('public')
+                        .upload(`tickets_auto/${fileName}`, pdfBytes, { contentType: 'application/pdf', upsert: true });
+
+                    if (!uploadErr) {
+                        const { data: pubUrl } = supabase.storage.from('public').getPublicUrl(`tickets_auto/${fileName}`);
+                        ticketLinks.push(pubUrl.publicUrl);
+                    }
+                } catch (err) {
+                    console.error("Error uploading PDF", err);
+                }
             }
 
-            alert(`¡Felicidades ${userDetails.name}! Has apartado ${selectedNumbers.length} ticket(s).`);
+            // Send Email NOTIFICATION
+            if (ticketLinks.length > 0) {
+                await sendTicketEmail(userDetails.email, userDetails.name, ticketLinks);
+            }
 
-            // Reset
+            alert(`¡Solicitud enviada ${userDetails.name}! Tus tickets están en verificación. Se marcarán como VENDIDOS una vez confirmemos el pago.`);
+
+            const newStatuses = { ...ticketStatuses };
+            selectedNumbers.forEach(n => newStatuses[n] = 'reserved');
+            setTicketStatuses(newStatuses);
             setSoldTickets([...soldTickets, ...selectedNumbers]);
+
             setSelectedNumbers([]);
             setShowUserForm(false);
             setReceiptFile(null);
             setSlots([0, 0, 0, 0]);
-            setUserDetails({ name: '', phone: '', idNumber: '' });
+            setUserDetails({ name: '', phone: '', email: '', idNumber: '' });
             setSelectedPayment(null);
 
         } catch (error: any) {
@@ -229,16 +363,13 @@ export default function Checkout() {
         }
     };
 
-    // --- Grid Helpers ---
     const visibleNumbers = useMemo(() => {
         const start = currentPage * pageSize;
         return Array.from({ length: pageSize }, (_, i) => start + i);
     }, [currentPage]);
 
-
     if (!raffle) return <div className="container" style={{ textAlign: 'center', marginTop: '5rem' }}>Cargando...</div>;
 
-    // Helper to determine if media is video
     const isVideo = (url: string) => url?.match(/\.(mp4|webm|ogg)|video/i);
 
     return (
@@ -246,9 +377,7 @@ export default function Checkout() {
             <Link to="/" style={{ color: '#94a3b8', textDecoration: 'none' }}>← Volver</Link>
 
             <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-
-                {/* Header with Media Preview */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', marginBottom: '1rem', width: '100%' }}>
                     {raffle.image_url && (
                         <div style={{ borderRadius: '1rem', overflow: 'hidden', maxWidth: '200px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
                             {isVideo(raffle.image_url) ? (
@@ -258,20 +387,30 @@ export default function Checkout() {
                             )}
                         </div>
                     )}
-                    <div>
+                    <div style={{ width: '100%', textAlign: 'center' }}>
                         <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{raffle.title}</h1>
-                        <p style={{ color: '#94a3b8', fontSize: '1.2rem' }}>{raffle.description}</p>
+                        <p style={{ color: '#94a3b8', fontSize: '1.2rem', marginBottom: '1.5rem' }}>{raffle.description}</p>
+
+                        {/* Progress Bar */}
+                        <div style={{ maxWidth: '600px', margin: '0 auto', background: '#f1f5f9', borderRadius: '999px', height: '24px', position: 'relative', overflow: 'hidden', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)' }}>
+                            <div style={{
+                                width: `${Math.min(100, (soldTickets.length / (raffle.total_tickets || 10000)) * 100)}%`,
+                                background: 'linear-gradient(90deg, #f59e0b, #fbbf24)',
+                                height: '100%',
+                                borderRadius: '999px',
+                                transition: 'width 1s ease-out'
+                            }}></div>
+                            <span style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold', color: '#475569', textShadow: '0 0 2px rgba(255,255,255,0.8)' }}>
+                                {soldTickets.length} / {raffle.total_tickets || 10000} Tickets Vendidos
+                            </span>
+                        </div>
                     </div>
                 </div>
 
                 <div className="card" style={{ padding: '2rem', minHeight: '300px', marginTop: '2rem' }}>
-
-                    {/* VISTA UNIFICADA */}
                     <div>
-                        {/* Controls Bar */}
+                        {/* Controls */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem', background: '#f8fafc', padding: '1rem', borderRadius: '1rem' }}>
-
-                            {/* Pagination */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <button className="btn" onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage === 0} style={{ padding: '0.5rem', borderRadius: '0.5rem' }}><ChevronLeft /></button>
                                 <span style={{ fontWeight: 'bold', minWidth: '100px', textAlign: 'center', color: '#64748b' }}>
@@ -281,7 +420,6 @@ export default function Checkout() {
                             </div>
 
                             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                                {/* Random Button */}
                                 <button
                                     onClick={spinMachine}
                                     disabled={spinning}
@@ -300,7 +438,25 @@ export default function Checkout() {
                                     {spinning ? 'Girando...' : (previewNumber !== null ? 'Girar de Nuevo' : 'Azar')}
                                 </button>
 
-                                {/* Search */}
+                                {raffle?.allow_multi_ticket && (
+                                    <button
+                                        onClick={() => setShowRouletteModal(true)}
+                                        className="btn"
+                                        style={{
+                                            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                                            color: 'white',
+                                            padding: '0.6rem 1.2rem',
+                                            display: 'flex',
+                                            gap: '0.5rem',
+                                            alignItems: 'center',
+                                            boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.4)'
+                                        }}
+                                    >
+                                        <span style={{ fontSize: '1.2rem' }}>⚡</span>
+                                        Ráfaga
+                                    </button>
+                                )}
+
                                 <div style={{ position: 'relative' }}>
                                     <Search size={18} style={{ position: 'absolute', left: 10, top: 11, color: '#94a3b8' }} />
                                     <input
@@ -314,10 +470,9 @@ export default function Checkout() {
                             </div>
                         </div>
 
-                        {/* MACHINE PREVIEW AREA */}
+                        {/* Machine Preview (Single) */}
                         {(spinning || previewNumber !== null) && (
                             <div style={{ marginBottom: '2rem', padding: '1.5rem', background: '#eff6ff', borderRadius: '1rem', border: '2px dashed #93c5fd', display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'fadeIn 0.3s' }}>
-
                                 <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
                                     {slots.map((num, i) => (
                                         <div key={i} style={{ width: '50px', height: '70px', background: '#1e293b', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '0.5rem', fontSize: '2rem', fontWeight: 'bold', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.2)' }}>
@@ -348,24 +503,46 @@ export default function Checkout() {
                             </div>
                         )}
 
-                        {/* The Grid */}
+                        {/* Grid */}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))', gap: '0.5rem' }}>
                             {visibleNumbers.map(num => {
-                                const isSold = soldTickets.includes(num);
+                                const status = ticketStatuses[num];
                                 const isSelected = selectedNumbers.includes(num);
+
+                                let bg = '#fff';
+                                let borderColor = '#e2e8f0';
+                                let color = '#334155';
+                                let cursor = 'pointer';
+
+                                if (status === 'paid') {
+                                    bg = '#10b981'; // Green
+                                    color = 'white';
+                                    borderColor = '#059669';
+                                    cursor = 'not-allowed';
+                                } else if (status === 'reserved') {
+                                    bg = '#94a3b8'; // Gray
+                                    color = 'white';
+                                    borderColor = '#64748b';
+                                    cursor = 'not-allowed';
+                                } else if (isSelected) {
+                                    bg = '#fff1f2';
+                                    color = '#be123c';
+                                    borderColor = '#fb7185';
+                                }
+
                                 return (
                                     <button
                                         key={num}
-                                        disabled={isSold}
+                                        disabled={!!status}
                                         onClick={() => toggleNumber(num)}
                                         style={{
                                             padding: '0.5rem',
                                             borderRadius: '0.5rem',
-                                            border: isSelected ? '2px solid #fb7185' : '1px solid #e2e8f0',
-                                            background: isSold ? '#cbd5e1' : isSelected ? '#fff1f2' : '#fff',
-                                            color: isSold ? '#64748b' : isSelected ? '#be123c' : '#334155',
-                                            cursor: isSold ? 'not-allowed' : 'pointer',
-                                            fontWeight: isSelected ? 'bold' : 'normal',
+                                            border: `1px solid ${borderColor}`,
+                                            background: bg,
+                                            color: color,
+                                            cursor: cursor,
+                                            fontWeight: isSelected || status ? 'bold' : 'normal',
                                             transition: 'all 0.1s',
                                             transform: isSelected ? 'scale(1.1)' : 'scale(1)'
                                         }}
@@ -376,7 +553,14 @@ export default function Checkout() {
                             })}
                         </div>
 
-                        {/* Bottom Action */}
+                        {/* Legend */}
+                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1rem', fontSize: '0.9rem', color: '#64748b' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><div style={{ width: 12, height: 12, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '2px' }}></div> Disponible</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><div style={{ width: 12, height: 12, background: '#94a3b8', borderRadius: '2px' }}></div> Apartado</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><div style={{ width: 12, height: 12, background: '#10b981', borderRadius: '2px' }}></div> Vendido</div>
+                        </div>
+
+                        {/* Cart */}
                         {selectedNumbers.length > 0 && (
                             <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'fadeIn 0.2s', background: '#fff1f2', padding: '1rem', borderRadius: '1rem', border: '1px solid #fecdd3' }}>
                                 <p style={{ margin: '0 0 1rem 0', color: '#be123c', textAlign: 'center' }}>
@@ -406,7 +590,59 @@ export default function Checkout() {
                         )}
                     </div>
 
-                    {/* MODAL DE DATOS */}
+                    {/* Advanced Roulette Modal */}
+                    {showRouletteModal && (
+                        <div style={{
+                            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                            background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 110,
+                            backdropFilter: 'blur(5px)'
+                        }}>
+                            <div style={{ background: '#1e293b', padding: '2rem 3rem', borderRadius: '1.5rem', width: '90%', maxWidth: '600px', boxShadow: '0 25px 30px -5px rgba(0, 0, 0, 0.3)', border: '1px solid #475569', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', maxHeight: '95vh', overflowY: 'auto' }}>
+                                <h2 style={{ fontSize: '2rem', margin: '0 0 1rem 0', background: '-webkit-linear-gradient(45deg, #f59e0b, #d97706)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>⚡ Ráfaga de Suerte</h2>
+                                <p style={{ color: '#94a3b8', textAlign: 'center', marginBottom: '2rem' }}>Selecciona cuántos tickets quieres y deja que el azar decida.</p>
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
+                                    <button className="btn" onClick={() => setRouletteCount(Math.max(1, rouletteCount - 1))} style={{ background: '#334155', padding: '0.5rem 1rem' }}>-</button>
+                                    <span style={{ fontSize: '2rem', fontWeight: 'bold', minWidth: '50px', textAlign: 'center' }}>{rouletteCount}</span>
+                                    <button className="btn" onClick={() => setRouletteCount(Math.min(10, rouletteCount + 1))} style={{ background: '#334155', padding: '0.5rem 1rem' }}>+</button>
+                                </div>
+
+                                {rouletteResults.length === 0 ? (
+                                    <button
+                                        onClick={spinRoulette}
+                                        disabled={rouletteSpinning}
+                                        className="btn"
+                                        style={{ fontSize: '1.5rem', padding: '1rem 3rem', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', boxShadow: '0 0 20px rgba(245, 158, 11, 0.5)' }}
+                                    >
+                                        {rouletteSpinning ? 'Girando...' : 'GIRAR AHORA'}
+                                    </button>
+                                ) : (
+                                    <div style={{ width: '100%' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+                                            {rouletteResults.map((num, i) => (
+                                                <div key={i} style={{ background: '#334155', borderRadius: '0.8rem', padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', border: '1px solid #475569' }}>
+                                                    <span style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>{num.toString().padStart(4, '0')}</span>
+                                                    <button onClick={() => reSpinSingle(i)} style={{ background: 'transparent', border: '1px solid #94a3b8', color: '#94a3b8', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.8rem', padding: '0.3rem 0.6rem' }}>
+                                                        ↻ Cambio
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                                            <button onClick={() => setRouletteResults([])} style={{ background: 'transparent', border: '1px solid #ef4444', color: '#ef4444', padding: '0.8rem 1.5rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 'bold' }}>Cancelar</button>
+                                            <button onClick={confirmRouletteSelection} style={{ background: '#10b981', color: 'white', padding: '0.8rem 2rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem', boxShadow: '0 0 15px rgba(16, 185, 129, 0.4)' }}>
+                                                ✅ ¡Me los llevo!
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <button onClick={() => setShowRouletteModal(false)} style={{ marginTop: '2rem', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', textDecoration: 'underline' }}>Cerrar</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Modal User Form */}
                     {showUserForm && (
                         <div style={{
                             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -470,7 +706,6 @@ export default function Checkout() {
                                                         <span style={{ fontWeight: '500' }}>{selectedPayment.account_owner}</span>
                                                     </div>
                                                 )}
-                                                {/* Aquí se podría agregar la tasa de cambio específica si aplica */}
                                             </div>
 
                                             <p style={{ fontSize: '0.85rem', color: '#ef4444', marginTop: '1rem', textAlign: 'center', background: '#fef2f2', padding: '0.5rem', borderRadius: '0.4rem' }}>
@@ -489,6 +724,12 @@ export default function Checkout() {
                                         style={inputStyle}
                                     />
                                     <input
+                                        required type="email" placeholder="Correo Electrónico (para recibir tus tickets)"
+                                        value={userDetails.email}
+                                        onChange={e => setUserDetails({ ...userDetails, email: e.target.value })}
+                                        style={inputStyle}
+                                    />
+                                    <input
                                         required placeholder="WhatsApp / Teléfono"
                                         value={userDetails.phone}
                                         onChange={e => setUserDetails({ ...userDetails, phone: e.target.value })}
@@ -501,7 +742,6 @@ export default function Checkout() {
                                         style={inputStyle}
                                     />
 
-                                    {/* Receipt Upload */}
                                     <div>
                                         <label style={{ display: 'block', fontSize: '0.9rem', color: '#334155', marginBottom: '0.3rem' }}>📸 Comprobante de Pago:</label>
                                         <input

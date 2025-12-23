@@ -4,7 +4,8 @@ export async function generateTicketPDF(ticketData: {
     ticketNumber: number,
     raffleTitle: string,
     price: number,
-    date: string
+    date: string,
+    status: 'reserved' | 'paid'
 }) {
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([400, 200]);
@@ -18,16 +19,28 @@ export async function generateTicketPDF(ticketData: {
         color: rgb(0.99, 0.98, 0.97), // #fdfbf7
     });
 
-    // Borde rosa pastel
+    // Borde
+    const isPaid = ticketData.status === 'paid';
     page.drawRectangle({
         x: 10, y: 10, width: width - 20, height: height - 20,
-        borderColor: rgb(0.99, 0.64, 0.69), // #fda4af
+        borderColor: isPaid ? rgb(0.1, 0.7, 0.4) : rgb(0.9, 0.4, 0.4), // Green or Red
         borderWidth: 4,
+    });
+
+    // Estado (Marca de agua o Texto destacado)
+    const statusText = isPaid ? 'TICKET ACTIVO' : 'EN PROCESO DE VERIFICACION';
+    const statusColor = isPaid ? rgb(0.1, 0.7, 0.4) : rgb(0.9, 0.4, 0.4);
+
+    page.drawText(statusText, {
+        x: 30, y: height - 40,
+        size: 10,
+        font: font,
+        color: statusColor,
     });
 
     // Cabecera: RIFAS FÉNIX (Limpiando acentos simple)
     page.drawText('RIFAS FENIX', {
-        x: 30, y: height - 50,
+        x: 30, y: height - 70,
         size: 20,
         font,
         color: rgb(0.53, 0.07, 0.22), // #881337 (Rose Dark)
@@ -35,7 +48,7 @@ export async function generateTicketPDF(ticketData: {
 
     // Número del Ticket
     page.drawText(`Ticket #${ticketData.ticketNumber}`, {
-        x: 30, y: height - 90,
+        x: 30, y: height - 110,
         size: 35,
         font,
         color: rgb(0.2, 0.25, 0.33), // #334155 (Slate 700)
@@ -50,7 +63,7 @@ export async function generateTicketPDF(ticketData: {
         .replace(/[^\x00-\x7F]/g, ""); // Limpieza final de seguridad
 
     page.drawText(cleanTitle, {
-        x: 30, y: height - 120,
+        x: 30, y: height - 140,
         size: 14,
         font: regularFont,
         color: rgb(0.4, 0.45, 0.55), // Slate 500

@@ -1,5 +1,6 @@
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import Checkout from './Checkout';
+import MyTickets from './pages/MyTickets';
 import AdminLayout from './pages/AdminLayout';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminContent from './pages/AdminContent';
@@ -14,6 +15,7 @@ function App() {
     <HashRouter>
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/mis-tickets" element={<MyTickets />} />
         <Route path="/login" element={<Login />} />
         <Route path="/checkout/:id" element={<Checkout />} />
 

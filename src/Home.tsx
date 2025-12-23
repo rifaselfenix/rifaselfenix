@@ -1,117 +1,174 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
 import { Link } from 'react-router-dom';
-import { Ticket, Star, ShieldCheck, Trophy } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-
 import HeroCarousel from './components/HeroCarousel';
-import WinnerStories from './components/WinnerStories';
+import { Ticket, Zap, ShieldCheck, Trophy } from 'lucide-react';
 
 export default function Home() {
     const [raffles, setRaffles] = useState<any[]>([]);
+    const [currencies, setCurrencies] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        supabase.from('raffles').select('*').eq('status', 'on_sale')
-            .then(({ data }) => {
-                setRaffles(data || []);
-                setLoading(false);
-            });
+        fetchRaffles();
     }, []);
 
-    return (
-        <>
-            <Navbar />
+    const fetchRaffles = async () => {
+        setLoading(true);
+        // Fetch raffles and tickets (only minimal fields from tickets for counting)
+        const { data: rafflesData } = await supabase.from('raffles').select('*, tickets(status)').eq('status', 'on_sale');
+        const { data: currenciesData } = await supabase.from('currencies').select('*').eq('is_active', true);
 
-            {/* HERO SECTION */}
+        if (currenciesData) setCurrencies(currenciesData);
+
+        if (rafflesData) {
+            // Calculate progress manually
+            const rafflesWithCount = rafflesData.map((r: any) => {
+                const soldCount = r.tickets ? r.tickets.filter((t: any) => t.status === 'paid' || t.status === 'reserved').length : 0;
+                return { ...r, soldCount };
+            });
+            setRaffles(rafflesWithCount);
+        }
+        setLoading(false);
+    };
+
+    const formatPrice = (usdAmount: number) => {
+        if (!currencies.length) return usdAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+        return currencies.map(c => {
+            const val = usdAmount * c.rate;
+            return new Intl.NumberFormat('es-VE', { style: 'currency', currency: c.code, maximumFractionDigits: 2 }).format(val);
+        }).join(' / ');
+    };
+
+    return (
+        <div style={{ background: '#f8fafc', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+            <Navbar />
             <HeroCarousel />
 
-            {/* FEATURES */}
-            <section style={{ padding: '4rem 2rem', background: 'white' }}>
-                <div className="container">
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
-                        <FeatureCard icon={<Trophy color="#eab308" />} title="Premios Reales" desc="Motos, tecnología y efectivo. Solo lo mejor para ti." />
-                        <FeatureCard icon={<ShieldCheck color="#10b981" />} title="100% Seguro" desc="Cada ticket queda registrado inmutablemente en nuestra base de datos." />
-                        <FeatureCard icon={<Star color="#f43f5e" />} title="Experiencia Premium" desc="Sin complicaciones. Compra en segundos y recibe tu ticket al instante." />
-                    </div>
+            {/* RAFFLES SECTION */}
+            <div id="rifas" className="container" style={{ padding: '6rem 1rem 4rem 1rem' }}>
+                <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
+                    <span style={{ color: '#be123c', fontWeight: 'bold', letterSpacing: '2px', fontSize: '0.9rem', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>Oportunidades Únicas</span>
+                    <h2 style={{ fontSize: '3rem', margin: 0, color: '#1e293b', fontWeight: '800' }}>Rifas Activas 🔥</h2>
+                    <div style={{ width: '80px', height: '6px', background: 'linear-gradient(90deg, #be123c, #fb7185)', margin: '1.5rem auto', borderRadius: '3px' }}></div>
                 </div>
-            </section>
 
-            {/* WINNERS */}
-            <WinnerStories />
-
-            {/* RAFFLES GRID */}
-            <section id="rifas" style={{ padding: '6rem 2rem' }}>
-                <div className="container">
-                    <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-                        <h2 style={{ fontSize: '2.5rem', color: '#1e293b', marginBottom: '1rem' }}>Sorteos Activos 🔥</h2>
-                        <p style={{ color: '#64748b' }}>Elige tu favorito y prueba tu suerte hoy mismo.</p>
+                {loading ? (
+                    <div style={{ textAlign: 'center', color: '#94a3b8', padding: '4rem' }}>
+                        <div className="spinner" style={{ width: 40, height: 40, border: '4px solid #cbd5e1', borderTopColor: '#be123c', borderRadius: '50%', margin: '0 auto 1rem auto', animation: 'spin 1s linear infinite' }}></div>
+                        Cargando oportunidades...
+                        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
                     </div>
+                ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '2.5rem' }}>
+                        {raffles.length === 0 ? (
+                            <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '4rem', background: 'white', borderRadius: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+                                <p style={{ fontSize: '1.2rem', color: '#64748b' }}>No hay rifas activas en este momento. ¡Vuelve pronto!</p>
+                            </div>
+                        ) : (
+                            raffles.map((raffle: any) => (
+                                <div key={raffle.id} className="raffle-card" style={{ background: 'white', borderRadius: '1.5rem', overflow: 'hidden', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01)', transition: 'transform 0.3s ease', display: 'flex', flexDirection: 'column' }}>
 
-                    {loading ? (
-                        <div style={{ textAlign: 'center', color: '#94a3b8' }}>Cargando oportunidades...</div>
-                    ) : raffles.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '3rem', background: 'white', borderRadius: '1rem', border: '1px solid #e2e8f0' }}>
-                            <p>No hay sorteos activos por el momento. ¡Vuelve pronto!</p>
-                        </div>
-                    ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2rem' }}>
-                            {raffles.map(raffle => (
-                                <div key={raffle.id} className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                                    {/* Image */}
-                                    {/* Media (Image or Video) */}
-                                    <div style={{ height: '200px', background: 'linear-gradient(135deg, #fce7f3 0%, #fae8ff 100%)', borderRadius: '1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                                        {raffle.image_url ? (
-                                            raffle.image_url.match(/\.(mp4|webm|ogg)$/i) ? (
-                                                <video
-                                                    src={raffle.image_url}
-                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                                    muted
-                                                    loop
-                                                    autoPlay
-                                                    playsInline
-                                                />
-                                            ) : (
-                                                <img src={raffle.image_url} alt={raffle.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            )
+                                    {/* Media Header */}
+                                    <div style={{ position: 'relative', height: '240px', overflow: 'hidden' }}>
+                                        {raffle.image_url?.match(/\.(mp4|webm|ogg)|video/i) ? (
+                                            <video src={raffle.image_url} autoPlay muted loop playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                         ) : (
-                                            <Ticket size={64} color="#f472b6" opacity={0.5} />
+                                            <img src={raffle.image_url} alt={raffle.title} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s' }} className="card-img" />
                                         )}
+                                        <div style={{ position: 'absolute', top: 15, right: 15, background: 'rgba(255,255,255,0.95)', color: '#10b981', padding: '0.5rem 1rem', borderRadius: '99px', fontWeight: 'bold', fontSize: '0.85rem', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', gap: '0.4rem', backdropFilter: 'blur(4px)' }}>
+                                            <span style={{ width: 8, height: 8, background: '#10b981', borderRadius: '50%' }}></span> En Venta
+                                        </div>
                                     </div>
 
-                                    <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.5rem', color: '#1e293b' }}>{raffle.title}</h3>
-                                    <p style={{ color: '#64748b', flex: 1, marginBottom: '2rem' }}>{raffle.description}</p>
+                                    {/* Content */}
+                                    <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                                        <h3 style={{ fontSize: '1.6rem', marginBottom: '0.8rem', color: '#1e293b', fontWeight: '800', lineHeight: 1.2 }}>{raffle.title}</h3>
+                                        <p style={{ color: '#64748b', marginBottom: '2rem', flex: 1, lineHeight: 1.6, fontSize: '1rem' }}>
+                                            {raffle.description.length > 100 ? raffle.description.substring(0, 100) + '...' : raffle.description}
+                                        </p>
 
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '1.5rem' }}>
-                                        <div>
-                                            <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8', textTransform: 'uppercase' }}>Precio Ticket</p>
-                                            <span style={{ fontSize: '1.5rem', fontWeight: '800', color: '#be123c' }}>${raffle.price}</span>
+                                        {/* Progress Bar */}
+                                        <div style={{ marginBottom: '2rem' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '0.6rem', color: '#475569', fontWeight: '600' }}>
+                                                <span>🔥 Progreso de venta</span>
+                                                <span>{Math.round((raffle.soldCount / (raffle.total_tickets || 10000)) * 100)}%</span>
+                                            </div>
+                                            <div style={{ background: '#f1f5f9', borderRadius: '999px', height: '12px', overflow: 'hidden', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)' }}>
+                                                <div style={{
+                                                    width: `${Math.min(100, (raffle.soldCount / (raffle.total_tickets || 10000)) * 100)}%`,
+                                                    background: 'linear-gradient(90deg, #f59e0b, #d97706)',
+                                                    height: '100%',
+                                                    borderRadius: '999px',
+                                                    transition: 'width 1s ease-out'
+                                                }}></div>
+                                            </div>
+                                            <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: '0.5rem', textAlign: 'right' }}>
+                                                {raffle.soldCount} tickets vendidos
+                                            </p>
                                         </div>
-                                        <Link to={`/checkout/${raffle.id}`} className="btn" style={{ padding: '0.8rem 1.5rem', fontSize: '1rem' }}>
-                                            Jugar Ahora
-                                        </Link>
+
+                                        <div style={{ marginTop: 'auto', background: '#f8fafc', margin: '0 -2rem -2rem -2rem', padding: '1.5rem 2rem', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div>
+                                                <span style={{ display: 'block', fontSize: '0.8rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 'bold' }}>Valor Ticket</span>
+                                                <span style={{ fontSize: '1.4rem', fontWeight: '800', color: '#059669', letterSpacing: '-0.5px' }}>
+                                                    {formatPrice(raffle.price)}
+                                                </span>
+                                            </div>
+                                            <Link to={`/checkout/${raffle.id}`} className="btn" style={{
+                                                background: '#1e293b', color: 'white', padding: '0.8rem 1.5rem', borderRadius: '0.8rem',
+                                                fontWeight: 'bold', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                                boxShadow: '0 4px 6px -1px rgba(30, 41, 59, 0.4)'
+                                            }}>
+                                                Jugar <Ticket size={18} />
+                                            </Link>
+                                        </div>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    )}
+                            ))
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* FEATURES SECTION */}
+            <section style={{ padding: '6rem 1rem', background: 'white' }}>
+                <div className="container" style={{ maxWidth: '1200px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '3rem' }}>
+                        <FeatureCard
+                            icon={<Zap size={32} color="#f59e0b" />}
+                            title="Sorteos Rápidos"
+                            desc="Resultados transparentes y ganadores cada semana."
+                        />
+                        <FeatureCard
+                            icon={<ShieldCheck size={32} color="#10b981" />}
+                            title="100% Seguro"
+                            desc="Plataforma verificada y pagos protegidos."
+                        />
+                        <FeatureCard
+                            icon={<Trophy size={32} color="#6366f1" />}
+                            title="Grandes Premios"
+                            desc="Desde efectivo hasta vehículos y electrónica."
+                        />
+                    </div>
                 </div>
             </section>
 
             <Footer />
-        </>
+        </div>
     );
 }
 
 function FeatureCard({ icon, title, desc }: any) {
     return (
-        <div style={{ padding: '2rem', background: '#fdfbf7', borderRadius: '1.5rem', border: '1px solid #f1f5f9' }}>
-            <div style={{ background: 'white', width: '50px', height: '50px', borderRadius: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '2rem' }}>
+            <div style={{ background: '#fffbeb', padding: '1.5rem', borderRadius: '50%', marginBottom: '1.5rem' }}>
                 {icon}
             </div>
-            <h3 style={{ margin: '0 0 0.5rem 0', color: '#1e293b' }}>{title}</h3>
-            <p style={{ color: '#64748b', lineHeight: '1.5', margin: 0 }}>{desc}</p>
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: '#1e293b' }}>{title}</h3>
+            <p style={{ color: '#64748b', lineHeight: 1.6 }}>{desc}</p>
         </div>
     );
 }

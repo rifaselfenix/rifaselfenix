@@ -24,6 +24,7 @@ export default function Navbar() {
                 {/* Desktop Links (Visible > 768px via CSS) */}
                 <div className="desktop-links" style={{ gap: '2rem', alignItems: 'center' }}>
                     <Link to="/" style={linkStyle}>Inicio</Link>
+                    <Link to="/mis-tickets" style={linkStyle}>Mis Tickets</Link>
                     <a href="/#/admin" style={{ ...linkStyle, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <User size={18} /> Admin
                     </a>
@@ -48,6 +49,7 @@ export default function Navbar() {
                     boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
                 }}>
                     <Link to="/" onClick={() => setIsMobileMenuOpen(false)} style={mobileLinkStyle}>🏠 Inicio</Link>
+                    <Link to="/mis-tickets" onClick={() => setIsMobileMenuOpen(false)} style={mobileLinkStyle}>🎟️ Mis Tickets</Link>
                     <a href="/#/admin" onClick={() => setIsMobileMenuOpen(false)} style={mobileLinkStyle}>⚙️ Admin</a>
                 </div>
             )}
