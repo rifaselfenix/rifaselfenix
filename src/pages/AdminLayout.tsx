@@ -1,9 +1,41 @@
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Ticket, LogOut, Image } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
 
 export default function AdminLayout() {
     const location = useLocation();
+    const navigate = useNavigate();
     const isActive = (path: string) => location.pathname === path;
+    const [checking, setChecking] = useState(true);
+
+    useEffect(() => {
+        checkSession();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            if (!session) {
+                navigate('/login');
+            }
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    const checkSession = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            navigate('/login');
+        }
+        setChecking(false);
+    };
+
+    const handleLogout = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        await supabase.auth.signOut();
+        navigate('/login');
+    };
+
+    if (checking) return <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>Cargando panel...</div>;
 
     return (
         <div className="admin-container">
@@ -29,6 +61,27 @@ export default function AdminLayout() {
                     <NavItem to="/admin/content" icon={<Image size={20} />} label="Multimedia" active={isActive('/admin/content')} />
                     <NavItem to="/admin/raffles" icon={<Ticket size={20} />} label="Mis Rifas" active={isActive('/admin/raffles')} />
                 </nav>
+
+                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+                    <button onClick={handleLogout} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        textDecoration: 'none',
+                        color: '#64748b',
+                        padding: '0.75rem',
+                        borderRadius: '0.5rem',
+                        transition: 'all 0.2s',
+                        background: 'none',
+                        border: 'none',
+                        width: '100%',
+                        cursor: 'pointer',
+                        fontSize: '1rem'
+                    }}>
+                        <LogOut size={20} />
+                        <span>Cerrar Sesión</span>
+                    </button>
+                </div>
             </aside>
 
             {/* Main Content */}
@@ -50,10 +103,10 @@ export default function AdminLayout() {
                     <Ticket size={24} />
                     <span>Rifas</span>
                 </Link>
-                <Link to="/">
+                <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: '#64748b', display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: '0.75rem', gap: '0.2rem' }}>
                     <LogOut size={24} />
                     <span>Salir</span>
-                </Link>
+                </button>
             </nav>
         </div>
     );

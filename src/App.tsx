@@ -5,6 +5,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminContent from './pages/AdminContent';
 import AdminRaffles from './pages/AdminRaffles';
 import AdminRaffleDetails from './pages/AdminRaffleDetails';
+import Login from './pages/Login';
 
 import Home from './Home';
 
@@ -13,6 +14,7 @@ function App() {
     <HashRouter>
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/checkout/:id" element={<Checkout />} />
 
         {/* Admin Routes */}
