@@ -456,16 +456,20 @@ export default function Checkout() {
                 <div className="card" style={{ padding: '2rem', minHeight: '300px', marginTop: '2rem' }}>
                     <div>
                         {/* Controls */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem', background: '#f8fafc', padding: '1rem', borderRadius: '1rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <button className="btn" onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage === 0} style={{ padding: '0.5rem', borderRadius: '0.5rem' }}><ChevronLeft /></button>
-                                <span style={{ fontWeight: 'bold', minWidth: '100px', textAlign: 'center', color: '#64748b' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.5rem', background: '#f8fafc', padding: '0.5rem', borderRadius: '1rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', width: '100%', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', gap: '0.2rem' }}>
+                                    <button className="btn" onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage === 0} style={{ padding: '0.4rem', borderRadius: '0.5rem' }}><ChevronLeft size={20} /></button>
+                                </div>
+                                <span style={{ fontWeight: 'bold', minWidth: '80px', textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
                                     {currentPage * pageSize} - {((currentPage + 1) * pageSize) - 1}
                                 </span>
-                                <button className="btn" onClick={() => setCurrentPage(p => Math.min(99, p + 1))} disabled={currentPage === 99} style={{ padding: '0.5rem', borderRadius: '0.5rem' }}><ChevronRight /></button>
+                                <div style={{ display: 'flex', gap: '0.2rem' }}>
+                                    <button className="btn" onClick={() => setCurrentPage(p => Math.min(99, p + 1))} disabled={currentPage === 99} style={{ padding: '0.4rem', borderRadius: '0.5rem' }}><ChevronRight size={20} /></button>
+                                </div>
                             </div>
 
-                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', width: '100%', justifyContent: 'center' }}>
                                 <button
                                     onClick={spinMachine}
                                     disabled={spinning}
@@ -473,15 +477,17 @@ export default function Checkout() {
                                     style={{
                                         background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
                                         color: 'white',
-                                        padding: '0.6rem 1.2rem',
+                                        padding: '0.5rem 1rem',
                                         display: 'flex',
-                                        gap: '0.5rem',
+                                        gap: '0.3rem',
                                         alignItems: 'center',
-                                        boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.4)'
+                                        boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.4)',
+                                        fontSize: '0.9rem',
+                                        flex: 1
                                     }}
                                 >
-                                    <span style={{ fontSize: '1.2rem' }}>{spinning ? '🎲' : '🎰'}</span>
-                                    {spinning ? 'Girando...' : (previewNumber !== null ? 'Girar de Nuevo' : 'Azar')}
+                                    <span style={{ fontSize: '1rem' }}>{spinning ? '🎲' : '🎰'}</span>
+                                    {spinning ? '...' : (previewNumber !== null ? 'Girar' : 'Azar')}
                                 </button>
 
                                 {raffle?.allow_multi_ticket && (
@@ -491,26 +497,28 @@ export default function Checkout() {
                                         style={{
                                             background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
                                             color: 'white',
-                                            padding: '0.6rem 1.2rem',
+                                            padding: '0.5rem 1rem',
                                             display: 'flex',
-                                            gap: '0.5rem',
+                                            gap: '0.3rem',
                                             alignItems: 'center',
-                                            boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.4)'
+                                            boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.4)',
+                                            fontSize: '0.9rem',
+                                            flex: 1
                                         }}
                                     >
-                                        <span style={{ fontSize: '1.2rem' }}>⚡</span>
+                                        <span style={{ fontSize: '1rem' }}>⚡</span>
                                         Ráfaga
                                     </button>
                                 )}
 
-                                <div style={{ position: 'relative' }}>
-                                    <Search size={18} style={{ position: 'absolute', left: 10, top: 11, color: '#94a3b8' }} />
+                                <div style={{ position: 'relative', flex: 1, minWidth: '100px' }}>
+                                    <Search size={16} style={{ position: 'absolute', left: 8, top: 10, color: '#94a3b8' }} />
                                     <input
                                         type="text"
                                         placeholder="Buscar..."
                                         value={searchTerm}
                                         onChange={e => handleSearch(e.target.value)}
-                                        style={{ padding: '0.6rem 0.6rem 0.6rem 2.2rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', width: '120px' }}
+                                        style={{ padding: '0.5rem 0.5rem 0.5rem 2rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', width: '100%', boxSizing: 'border-box' }}
                                     />
                                 </div>
                             </div>
@@ -550,7 +558,7 @@ export default function Checkout() {
                         )}
 
                         {/* Grid */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))', gap: '0.5rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(48px, 1fr))', gap: '0.4rem' }}>
                             {visibleNumbers.map(num => {
                                 const status = ticketStatuses[num];
                                 const isSelected = selectedNumbers.includes(num);

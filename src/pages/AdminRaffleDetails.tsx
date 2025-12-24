@@ -538,7 +538,7 @@ export default function AdminRaffleDetails() {
             </div>
 
             {/* GROUPED TABLE */}
-            <div style={{ background: 'white', borderRadius: '1rem', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+            <div style={{ background: 'white', borderRadius: '1rem', border: '1px solid #e2e8f0', overflow: 'hidden', overflowX: 'auto' }}>
                 {groupedTickets.length === 0 ? (
                     <div style={{ padding: '4rem', textAlign: 'center', color: '#94a3b8' }}>
                         <Ticket size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
