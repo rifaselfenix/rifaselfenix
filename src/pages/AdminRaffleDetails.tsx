@@ -312,7 +312,15 @@ export default function AdminRaffleDetails() {
             if (group.client_phone) {
                 const phone = group.client_phone.replace(/\D/g, '');
                 const ticketNumbers = group.tickets.map((t: any) => t.ticket_number).join(', #');
-                const message = `Hola ${group.client_name}, hemos verificado tu pago. Tus tickets *#${ticketNumbers}* para la rifa *${raffle.title}* ya están ACTIVOS. ¡Mucha suerte! 🍀`;
+                const link = `${window.location.origin}/#/mis-tickets?q=${group.client_phone.replace('+', '%2B')}`; // Encode +
+
+                const message = `Hola ${group.client_name}, pago verificado ✅.
+Tus tickets: *#${ticketNumbers}*
+Para la rifa: *${raffle.title}*
+
+Ver tickets aquí: ${link}
+
+¡Mucha suerte! 🍀`;
                 window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
             }
         }

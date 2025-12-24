@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -8,10 +9,18 @@ export default function MyTickets() {
     const [searchTerm, setSearchTerm] = useState('');
     const [tickets, setTickets] = useState<any[] | null>(null);
     const [loading, setLoading] = useState(false);
+    const location = useLocation();
 
-    const handleSearch = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!searchTerm) return;
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const q = params.get('q');
+        if (q) {
+            setSearchTerm(q);
+            performSearch(q);
+        }
+    }, [location.search]);
+
+    const performSearch = async (term: string) => {
         setLoading(true);
         setTickets(null);
 
@@ -19,24 +28,28 @@ export default function MyTickets() {
         const { data, error } = await supabase
             .from('tickets')
             .select('*, raffles ( title, image_url )')
-            .or(`client_phone.eq.${searchTerm},client_email.eq.${searchTerm.toLowerCase()}`)
+            .or(`client_phone.eq.${term},client_email.eq.${term.toLowerCase()}`)
             .order('created_at', { ascending: false });
 
         if (data) {
             setTickets(data);
         } else {
             console.error(error);
-            // Fallback if join fails (e.g. FK not detected), try fetching simple
             if (error?.message?.includes('could not find')) {
                 const { data: simpleData } = await supabase
                     .from('tickets')
                     .select('*')
-                    .or(`client_phone.eq.${searchTerm},client_email.eq.${searchTerm.toLowerCase()}`)
+                    .or(`client_phone.eq.${term},client_email.eq.${term.toLowerCase()}`)
                     .order('created_at', { ascending: false });
                 setTickets(simpleData || []);
             }
         }
         setLoading(false);
+    };
+
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (searchTerm) performSearch(searchTerm);
     };
 
     return (
