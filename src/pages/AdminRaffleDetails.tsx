@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import confetti from 'canvas-confetti';
-import { ArrowLeft, Phone, Edit2, CheckCircle, ExternalLink, Ticket, Trophy, Play, Download } from 'lucide-react';
+import { ArrowLeft, Phone, Edit2, CheckCircle, ExternalLink, Ticket, Trophy, Play, Download, Copy } from 'lucide-react';
 
 export default function AdminRaffleDetails() {
     const { id } = useParams();
@@ -262,6 +262,28 @@ export default function AdminRaffleDetails() {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        document.body.removeChild(link);
+    };
+
+    const getMessage = (group: any) => {
+        if (!raffle) return '';
+        const ticketNumbers = group.tickets.map((t: any) => t.ticket_number).join(', #');
+        const link = group.client_phone ? `${window.location.origin}/#/mis-tickets?q=${group.client_phone.replace('+', '%2B')}` : '';
+
+        return `Hola ${group.client_name}, pago verificado ✅.
+Tus tickets: *#${ticketNumbers}*
+Para la rifa: *${raffle.title}*
+
+Ver tickets aquí: ${link}
+
+¡Mucha suerte! 🍀`;
+    };
+
+    const handleCopyMessage = (group: any) => {
+        const msg = getMessage(group);
+        navigator.clipboard.writeText(msg).then(() => {
+            alert('¡Mensaje copiado al portapapeles!');
+        });
     };
 
     // Group Tickets by Client (Name + Phone) to Handle Multi-Ticket Orders
@@ -614,14 +636,23 @@ Ver tickets aquí: ${link}
                                                 <CheckCircle size={16} /> Aprobar Todo
                                             </button>
                                         ) : (
-                                            <a
-                                                href={`https://wa.me/${group.client_phone?.replace(/\D/g, '')}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                style={{ background: '#dcfce7', color: '#166534', padding: '0.5rem 1rem', borderRadius: '0.5rem', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
-                                            >
-                                                <Phone size={16} /> Contactar
-                                            </a>
+                                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                                <button
+                                                    onClick={() => handleCopyMessage(group)}
+                                                    title="Copiar Mensaje"
+                                                    style={{ background: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1', padding: '0.5rem', borderRadius: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                >
+                                                    <Copy size={16} />
+                                                </button>
+                                                <a
+                                                    href={`https://wa.me/${group.client_phone?.replace(/\D/g, '')}?text=${encodeURIComponent(getMessage(group))}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    style={{ background: '#dcfce7', color: '#166534', padding: '0.5rem 1rem', borderRadius: '0.5rem', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+                                                >
+                                                    <Phone size={16} /> Contactar
+                                                </a>
+                                            </div>
                                         )}
                                     </td>
                                 </tr>
@@ -631,61 +662,63 @@ Ver tickets aquí: ${link}
                 )}
             </div>
             {/* WINNER MODAL */}
-            {showWinnerModal && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
-                    backdropFilter: 'blur(5px)'
-                }}>
-                    <div style={{ background: '#1e293b', padding: '3rem', borderRadius: '2rem', width: '90%', maxWidth: '500px', textAlign: 'center', color: 'white', border: '1px solid #334155', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
-                        <h2 style={{ fontSize: '2rem', marginBottom: '2rem', background: '-webkit-linear-gradient(45deg, #fbbf24, #d97706)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                            🎰 Gran Sorteo
-                        </h2>
+            {
+                showWinnerModal && (
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
+                        backdropFilter: 'blur(5px)'
+                    }}>
+                        <div style={{ background: '#1e293b', padding: '3rem', borderRadius: '2rem', width: '90%', maxWidth: '500px', textAlign: 'center', color: 'white', border: '1px solid #334155', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+                            <h2 style={{ fontSize: '2rem', marginBottom: '2rem', background: '-webkit-linear-gradient(45deg, #fbbf24, #d97706)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                                🎰 Gran Sorteo
+                            </h2>
 
-                        <div style={{
-                            fontSize: '5rem', fontWeight: 'bold', fontFamily: 'monospace',
-                            background: '#0f172a', padding: '1.5rem', borderRadius: '1rem',
-                            marginBottom: '2rem', border: '2px solid #334155', letterSpacing: '8px',
-                            color: isSpinning ? '#e2e8f0' : '#fbbf24',
-                            textShadow: isSpinning ? 'none' : '0 0 20px rgba(251, 191, 36, 0.5)'
-                        }}>
-                            {displayNumber}
-                        </div>
-
-                        {winner && (
-                            <div style={{ marginBottom: '2rem', animation: 'scaleIn 0.5s' }}>
-                                <p style={{ color: '#94a3b8', margin: 0 }}>¡Felicidades al Ticket Ganador!</p>
-                                <h3 style={{ fontSize: '1.5rem', margin: '0.5rem 0', color: '#fff' }}>{winner.client_name}</h3>
-                                <p style={{ color: '#fbbf24' }}>{winner.client_phone}</p>
+                            <div style={{
+                                fontSize: '5rem', fontWeight: 'bold', fontFamily: 'monospace',
+                                background: '#0f172a', padding: '1.5rem', borderRadius: '1rem',
+                                marginBottom: '2rem', border: '2px solid #334155', letterSpacing: '8px',
+                                color: isSpinning ? '#e2e8f0' : '#fbbf24',
+                                textShadow: isSpinning ? 'none' : '0 0 20px rgba(251, 191, 36, 0.5)'
+                            }}>
+                                {displayNumber}
                             </div>
-                        )}
 
-                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                            <button
-                                onClick={() => setShowWinnerModal(false)}
-                                style={{ background: 'transparent', border: '1px solid #475569', color: '#94a3b8', padding: '0.8rem 2rem', borderRadius: '0.5rem', cursor: 'pointer' }}
-                            >
-                                Cerrar
-                            </button>
-                            {!winner && (
-                                <button
-                                    onClick={handleSpin}
-                                    disabled={isSpinning}
-                                    style={{
-                                        background: '#10b981', color: 'white', border: 'none',
-                                        padding: '0.8rem 2rem', borderRadius: '0.5rem', cursor: 'pointer',
-                                        fontWeight: 'bold', fontSize: '1.1rem',
-                                        display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                        opacity: isSpinning ? 0.7 : 1
-                                    }}
-                                >
-                                    {isSpinning ? 'Girando...' : <><Play size={20} fill="white" /> Girar</>}
-                                </button>
+                            {winner && (
+                                <div style={{ marginBottom: '2rem', animation: 'scaleIn 0.5s' }}>
+                                    <p style={{ color: '#94a3b8', margin: 0 }}>¡Felicidades al Ticket Ganador!</p>
+                                    <h3 style={{ fontSize: '1.5rem', margin: '0.5rem 0', color: '#fff' }}>{winner.client_name}</h3>
+                                    <p style={{ color: '#fbbf24' }}>{winner.client_phone}</p>
+                                </div>
                             )}
+
+                            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                                <button
+                                    onClick={() => setShowWinnerModal(false)}
+                                    style={{ background: 'transparent', border: '1px solid #475569', color: '#94a3b8', padding: '0.8rem 2rem', borderRadius: '0.5rem', cursor: 'pointer' }}
+                                >
+                                    Cerrar
+                                </button>
+                                {!winner && (
+                                    <button
+                                        onClick={handleSpin}
+                                        disabled={isSpinning}
+                                        style={{
+                                            background: '#10b981', color: 'white', border: 'none',
+                                            padding: '0.8rem 2rem', borderRadius: '0.5rem', cursor: 'pointer',
+                                            fontWeight: 'bold', fontSize: '1.1rem',
+                                            display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                            opacity: isSpinning ? 0.7 : 1
+                                        }}
+                                    >
+                                        {isSpinning ? 'Girando...' : <><Play size={20} fill="white" /> Girar</>}
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
         </div >
     );
 }
