@@ -274,6 +274,11 @@ export default function Checkout() {
         }
         setShowRouletteModal(false);
         setRouletteResults([]);
+
+        // Auto-scroll to form after selection
+        setTimeout(() => {
+            document.getElementById('checkout-form')?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
     };
 
     // --- Grid Logic ---
@@ -582,343 +587,348 @@ export default function Checkout() {
                                 </div>
                             </div>
                         </div>
-
-                        {/* Machine Preview (Single) */}
-                        {(spinning || previewNumber !== null) && (
-                            <div style={{ marginBottom: '2rem', padding: '1.5rem', background: '#eff6ff', borderRadius: '1rem', border: '2px dashed #93c5fd', display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'fadeIn 0.3s' }}>
-                                <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                                    {slots.map((num, i) => (
-                                        <div key={i} style={{ width: '50px', height: '70px', background: '#1e293b', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '0.5rem', fontSize: '2rem', fontWeight: 'bold', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.2)' }}>
-                                            {num}
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {!spinning && previewNumber !== null && (
-                                    <div style={{ display: 'flex', gap: '1rem', animation: 'scaleIn 0.2s' }}>
-                                        <button
-                                            onClick={addPreviewToCart}
-                                            className="btn"
-                                            style={{ background: '#10b981', color: 'white', fontSize: '1.1rem', padding: '0.8rem 1.5rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}
-                                        >
-                                            <TicketIcon size={20} /> AGREGAR #{previewNumber.toString().padStart(4, '0')}
-                                        </button>
-                                        <button
-                                            onClick={spinMachine}
-                                            className="btn"
-                                            style={{ background: '#fff', color: '#6366f1', border: '1px solid #6366f1', padding: '0.8rem 1.5rem' }}
-                                        >
-                                            Intentar otro
-                                        </button>
-                                    </div>
-                                )}
-                                {spinning && <p style={{ color: '#6366f1', fontWeight: 'bold' }}>Buscando tu número de la suerte...</p>}
-                            </div>
-                        )}
-
-                        {/* Grid */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(48px, 1fr))', gap: '0.4rem' }}>
-                            {visibleNumbers.map(num => {
-                                const status = ticketStatuses[num];
-                                const isSelected = selectedNumbers.includes(num);
-
-                                let bg = '#fff';
-                                let borderColor = '#e2e8f0';
-                                let color = '#334155';
-                                let cursor = 'pointer';
-
-                                if (status === 'paid') {
-                                    bg = '#10b981'; // Green
-                                    color = 'white';
-                                    borderColor = '#059669';
-                                    cursor = 'not-allowed';
-                                } else if (status === 'reserved') {
-                                    bg = '#94a3b8'; // Gray
-                                    color = 'white';
-                                    borderColor = '#64748b';
-                                    cursor = 'not-allowed';
-                                } else if (isSelected) {
-                                    bg = '#fff1f2';
-                                    color = '#be123c';
-                                    borderColor = '#fb7185';
-                                }
-
-                                return (
-                                    <button
-                                        key={num}
-                                        disabled={!!status}
-                                        onClick={() => toggleNumber(num)}
-                                        style={{
-                                            padding: '0.5rem',
-                                            borderRadius: '0.5rem',
-                                            border: `1px solid ${borderColor}`,
-                                            background: bg,
-                                            color: color,
-                                            cursor: cursor,
-                                            fontWeight: isSelected || status ? 'bold' : 'normal',
-                                            transition: 'all 0.1s',
-                                            transform: isSelected ? 'scale(1.1)' : 'scale(1)'
-                                        }}
-                                    >
-                                        {num.toString().padStart(4, '0')}
-                                    </button>
-                                );
-                            })}
-                        </div>
-
-                        {/* Legend */}
-                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1rem', fontSize: '0.9rem', color: '#64748b' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><div style={{ width: 12, height: 12, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '2px' }}></div> Disponible</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><div style={{ width: 12, height: 12, background: '#94a3b8', borderRadius: '2px' }}></div> Apartado</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><div style={{ width: 12, height: 12, background: '#10b981', borderRadius: '2px' }}></div> Vendido</div>
-                        </div>
-
-                        {/* Cart */}
-                        {selectedNumbers.length > 0 && (
-                            <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'fadeIn 0.2s', background: '#fff1f2', padding: '1rem', borderRadius: '1rem', border: '1px solid #fecdd3' }}>
-                                <p style={{ margin: '0 0 1rem 0', color: '#be123c', textAlign: 'center' }}>
-                                    Has seleccionado <strong>{selectedNumbers.length}</strong> ticket{selectedNumbers.length > 1 ? 's' : ''}.
-                                    <br />
-                                    Total: <strong style={{ fontSize: '1.4rem' }}>{formatPrice(selectedNumbers.length * raffle.price)}</strong>
-                                </p>
-                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '1rem' }}>
-                                    {selectedNumbers.map(n => (
-                                        <div key={n} style={{ background: 'white', padding: '0.3rem 0.6rem', borderRadius: '0.4rem', border: '1px solid #fda4af', fontSize: '1rem', color: '#be123c', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            {n.toString().padStart(4, '0')}
-                                            <button
-                                                onClick={() => removeNumber(n)}
-                                                style={{ border: 'none', background: '#fee2e2', color: '#ef4444', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}
-                                                title="Eliminar ticket"
-                                            >
-                                                ✕
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                                <button onClick={handleBuyClick} className="btn" style={{ background: '#10b981', ...buyBtnBase, width: '100%', justifyContent: 'center' }}>
-                                    <TicketIcon size={24} />
-                                    Continuar al Pago
-                                </button>
-                            </div>
-                        )}
                     </div>
 
-                    {/* Advanced Roulette Modal */}
+                    {/* Inline Ráfaga (Roulette) */}
                     {showRouletteModal && (
-                        <div style={{
-                            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                            background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 110,
-                            backdropFilter: 'blur(5px)', padding: '1rem', overflowY: 'auto'
-                        }}>
-                            <div style={{ background: '#1e293b', padding: '2rem 1.5rem', borderRadius: '1.5rem', width: '100%', maxWidth: '600px', boxShadow: '0 25px 30px -5px rgba(0, 0, 0, 0.3)', border: '1px solid #475569', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '10vh' }}>
-                                <h2 style={{ fontSize: '2rem', margin: '0 0 1rem 0', background: '-webkit-linear-gradient(45deg, #f59e0b, #d97706)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>⚡ Ráfaga de Suerte</h2>
-                                <p style={{ color: '#94a3b8', textAlign: 'center', marginBottom: '2rem' }}>Selecciona cuántos tickets quieres y deja que el azar decida.</p>
+                        <div style={{ marginBottom: '2rem', padding: '1.5rem', background: '#fffbeb', borderRadius: '1rem', border: '2px dashed #f59e0b', animation: 'fadeIn 0.3s' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                <h3 style={{ margin: 0, color: '#b45309', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.3rem' }}>
+                                    ⚡ Ráfaga de Suerte
+                                </h3>
+                                <button onClick={() => setShowRouletteModal(false)} style={{ background: '#fef3c7', border: 'none', width: '30px', height: '30px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#b45309', fontWeight: 'bold' }}>✕</button>
+                            </div>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
-                                    <button className="btn" onClick={() => setRouletteCount(Math.max(1, rouletteCount - 1))} style={{ background: '#334155', padding: '0.5rem 1rem' }}>-</button>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max="1000"
-                                        value={rouletteCount}
-                                        onChange={(e) => {
-                                            const val = parseInt(e.target.value);
-                                            if (!isNaN(val)) setRouletteCount(Math.min(1000, Math.max(1, val)));
-                                        }}
-                                        style={{
-                                            fontSize: '2rem',
-                                            fontWeight: 'bold',
-                                            width: '100px',
-                                            textAlign: 'center',
-                                            background: 'transparent',
-                                            border: 'none',
-                                            color: 'white',
-                                            borderBottom: '2px solid #475569'
-                                        }}
-                                    />
-                                    <button className="btn" onClick={() => setRouletteCount(Math.min(1000, rouletteCount + 1))} style={{ background: '#334155', padding: '0.5rem 1rem' }}>+</button>
-                                </div>
+                            <p style={{ color: '#92400e', textAlign: 'center', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+                                Selecciona cuántos tickets quieres y deja que el azar decida por ti.
+                            </p>
 
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', marginBottom: '2rem' }}>
+                                <button className="btn" onClick={() => setRouletteCount(Math.max(1, rouletteCount - 1))} style={{ background: '#fcd34d', color: '#78350f', padding: '0.5rem 1rem', fontWeight: 'bold' }}>-</button>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="1000"
+                                    value={rouletteCount}
+                                    onChange={(e) => {
+                                        const val = parseInt(e.target.value);
+                                        if (!isNaN(val)) setRouletteCount(Math.min(1000, Math.max(1, val)));
+                                    }}
+                                    style={{
+                                        fontSize: '1.8rem',
+                                        fontWeight: 'bold',
+                                        width: '80px',
+                                        textAlign: 'center',
+                                        background: 'white',
+                                        border: '1px solid #f59e0b',
+                                        borderRadius: '0.5rem',
+                                        color: '#b45309',
+                                        padding: '0.2rem'
+                                    }}
+                                />
+                                <button className="btn" onClick={() => setRouletteCount(Math.min(1000, rouletteCount + 1))} style={{ background: '#fcd34d', color: '#78350f', padding: '0.5rem 1rem', fontWeight: 'bold' }}>+</button>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'center' }}>
                                 {rouletteResults.length === 0 ? (
                                     <button
                                         onClick={spinRoulette}
                                         disabled={rouletteSpinning}
                                         className="btn"
-                                        style={{ fontSize: '1.5rem', padding: '1rem 3rem', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', boxShadow: '0 0 20px rgba(245, 158, 11, 0.5)' }}
+                                        style={{ fontSize: '1.1rem', padding: '1rem 3rem', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: 'white', boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.4)' }}
                                     >
-                                        {rouletteSpinning ? 'Girando...' : 'GIRAR AHORA'}
+                                        {rouletteSpinning ? 'Girando...' : '🎰 GENERAR TICKETS'}
                                     </button>
                                 ) : (
                                     <div style={{ width: '100%' }}>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '0.5rem', marginBottom: '1.5rem' }}>
                                             {rouletteResults.map((num, i) => (
-                                                <div key={i} style={{ background: '#334155', borderRadius: '0.8rem', padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', border: '1px solid #475569' }}>
-                                                    <span style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>{num.toString().padStart(4, '0')}</span>
-                                                    <button onClick={() => reSpinSingle(i)} style={{ background: 'transparent', border: '1px solid #94a3b8', color: '#94a3b8', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.8rem', padding: '0.3rem 0.6rem' }}>
-                                                        ↻ Cambio
+                                                <div key={i} style={{ background: 'white', borderRadius: '0.5rem', padding: '0.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', border: '1px solid #fcd34d' }}>
+                                                    <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#b45309' }}>{num.toString().padStart(4, '0')}</span>
+                                                    <button onClick={() => reSpinSingle(i)} style={{ marginTop: '0.3rem', background: 'transparent', border: 'none', color: '#d97706', cursor: 'pointer', fontSize: '0.7rem', textDecoration: 'underline' }}>
+                                                        Cambiar
                                                     </button>
                                                 </div>
                                             ))}
                                         </div>
                                         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                                            <button onClick={() => setRouletteResults([])} style={{ background: 'transparent', border: '1px solid #ef4444', color: '#ef4444', padding: '0.8rem 1.5rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 'bold' }}>Cancelar</button>
-                                            <button onClick={confirmRouletteSelection} style={{ background: '#10b981', color: 'white', padding: '0.8rem 2rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem', boxShadow: '0 0 15px rgba(16, 185, 129, 0.4)' }}>
-                                                ✅ ¡Me los llevo!
+                                            <button onClick={() => setRouletteResults([])} style={{ background: 'white', border: '1px solid #f87171', color: '#ef4444', padding: '0.8rem 1.5rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 'bold' }}>Cancelar</button>
+                                            <button onClick={confirmRouletteSelection} style={{ background: '#10b981', color: 'white', padding: '0.8rem 2rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem', boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.4)' }}>
+                                                ✅ ¡Los quiero!
                                             </button>
                                         </div>
                                     </div>
                                 )}
-
-                                <button onClick={() => setShowRouletteModal(false)} style={{ marginTop: '2rem', background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', textDecoration: 'underline' }}>Cerrar</button>
                             </div>
                         </div>
                     )}
 
-                    {/* INLINE User Form (No Modal) */}
-                    {selectedNumbers.length > 0 && showUserForm && (
-                        <div id="checkout-form" style={{ marginTop: '3rem', padding: '2rem', background: '#f8fafc', borderRadius: '1rem', border: '1px solid #e2e8f0' }}>
-                            <h2 style={{ marginTop: 0, color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem', marginBottom: '2rem' }}>👇 Completa tus datos aquí</h2>
-
-                            <h4 style={{ margin: '0 0 1rem 0', color: '#334155' }}>1. Selecciona Método de Pago:</h4>
-
-                            {!selectedPayment ? (
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-                                    {paymentMethods.map(pm => (
-                                        <button
-                                            key={pm.id}
-                                            onClick={() => setSelectedPayment(pm)}
-                                            style={{
-                                                border: '1px solid #e2e8f0', borderRadius: '0.5rem', background: 'white', padding: '1rem',
-                                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', cursor: 'pointer',
-                                                transition: 'all 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                                            }}
-                                            className="payment-method-btn"
-                                        >
-                                            {pm.image_url ? (
-                                                <img src={pm.image_url} alt={pm.bank_name} style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
-                                            ) : (
-                                                <div style={{ width: '40px', height: '40px', background: '#e2e8f0', borderRadius: '0.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🏦</div>
-                                            )}
-                                            <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#475569', textAlign: 'center' }}>{pm.bank_name}</span>
-                                        </button>
-                                    ))}
-                                    {paymentMethods.length === 0 && <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>No hay métodos de pago configurados.</p>}
-                                </div>
-                            ) : (
-                                <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '0.8rem', border: '1px solid #e2e8f0', animation: 'fadeIn 0.3s', marginBottom: '2rem' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                            {selectedPayment.image_url && <img src={selectedPayment.image_url} alt={selectedPayment.bank_name} style={{ width: '50px', height: '50px', objectFit: 'contain', background: 'white', borderRadius: '0.4rem', border: '1px solid #e2e8f0' }} />}
-                                            <div>
-                                                <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>{selectedPayment.bank_name}</h3>
-                                                <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>{selectedPayment.account_type}</p>
-                                            </div>
-                                        </div>
-                                        <button onClick={() => setSelectedPayment(null)} style={{ color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '600' }}>Cambiar</button>
+                    {/* Machine Preview (Single) */}
+                    {(spinning || previewNumber !== null) && (
+                        <div style={{ marginBottom: '2rem', padding: '1.5rem', background: '#eff6ff', borderRadius: '1rem', border: '2px dashed #93c5fd', display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'fadeIn 0.3s' }}>
+                            <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                                {slots.map((num, i) => (
+                                    <div key={i} style={{ width: '50px', height: '70px', background: '#1e293b', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '0.5rem', fontSize: '2rem', fontWeight: 'bold', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.2)' }}>
+                                        {num}
                                     </div>
+                                ))}
+                            </div>
 
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '1rem', color: '#334155' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e2e8f0', paddingBottom: '0.5rem' }}>
-                                            <span style={{ color: '#64748b' }}>Cuenta:</span>
-                                            <span style={{ fontFamily: 'monospace', fontWeight: 'bold', fontSize: '1.1rem' }}>{selectedPayment.account_number}</span>
-                                        </div>
-                                        {selectedPayment.account_owner && (
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span style={{ color: '#64748b' }}>Titular:</span>
-                                                <span style={{ fontWeight: '500' }}>{selectedPayment.account_owner}</span>
-                                            </div>
-                                        )}
-                                        {selectedPayment.account_id_number && (
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span style={{ color: '#64748b' }}>ID/Cédula:</span>
-                                                <span style={{ fontWeight: '500' }}>{selectedPayment.account_id_number}</span>
-                                            </div>
-                                        )}
-                                        {selectedPayment.bank_phone && (
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span style={{ color: '#64748b' }}>Teléfono (Pago Móvil):</span>
-                                                <span style={{ fontWeight: '500' }}>{selectedPayment.bank_phone}</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: '#64748b', fontStyle: 'italic' }}>
-                                        {selectedPayment.instructions || 'Realiza la transferencia y adjunta el comprobante abajo.'}
-                                    </div>
-                                </div>
-                            )}
-
-                            <h4 style={{ margin: '0 0 1rem 0', color: '#334155' }}>2. Ingresa tus Datos y Comprobante:</h4>
-                            <form onSubmit={confirmPurchase} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                <input
-                                    required placeholder="Nombre Completo"
-                                    value={userDetails.name}
-                                    onChange={e => setUserDetails({ ...userDetails, name: e.target.value })}
-                                    style={inputStyle}
-                                />
-                                <input
-                                    required type="email" placeholder="Correo Electrónico (para recibir tus tickets)"
-                                    value={userDetails.email}
-                                    onChange={e => setUserDetails({ ...userDetails, email: e.target.value })}
-                                    style={inputStyle}
-                                />
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <select
-                                        value={countryCode}
-                                        onChange={e => setCountryCode(e.target.value)}
-                                        style={{ ...inputStyle, width: '90px' }}
+                            {!spinning && previewNumber !== null && (
+                                <div style={{ display: 'flex', gap: '1rem', animation: 'scaleIn 0.2s' }}>
+                                    <button
+                                        onClick={addPreviewToCart}
+                                        className="btn"
+                                        style={{ background: '#10b981', color: 'white', fontSize: '1.1rem', padding: '0.8rem 1.5rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}
                                     >
-                                        {COUNTRY_CODES.map(c => (
-                                            <option key={c.code} value={c.code}>{c.country} {c.code}</option>
-                                        ))}
-                                    </select>
-                                    <div style={{ position: 'relative', flex: 1 }}>
-                                        <input
-                                            required placeholder="WhatsApp / Teléfono"
-                                            value={localPhone}
-                                            onChange={e => {
-                                                const val = e.target.value.replace(/\D/g, ''); // Only numbers
-                                                if (val.length <= 15) setLocalPhone(val);
-                                            }}
-                                            style={{ ...inputStyle, width: '100%', paddingRight: '2rem' }}
-                                            type="tel"
-                                        />
-                                        {localPhone.length > 0 && (
-                                            <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
-                                                {localPhone.length < 7 ? (
-                                                    <span title="Número muy corto" style={{ color: '#fbbf24', fontSize: '1.2rem' }}>⚠️</span>
-                                                ) : (
-                                                    <span title="Válido" style={{ color: '#10b981', fontSize: '1.2rem' }}>✅</span>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                                <input
-                                    placeholder="Cédula / DNI (Opcional)"
-                                    value={userDetails.idNumber}
-                                    onChange={e => setUserDetails({ ...userDetails, idNumber: e.target.value })}
-                                    style={inputStyle}
-                                />
-
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.9rem', color: '#334155', marginBottom: '0.3rem' }}>📸 Comprobante de Pago:</label>
-                                    <input
-                                        type="file"
-                                        accept="image/*,application/pdf"
-                                        onChange={e => setReceiptFile(e.target.files ? e.target.files[0] : null)}
-                                        style={{ ...inputStyle, padding: '0.4rem' }}
-                                    />
-                                </div>
-
-                                <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                                    <button type="submit" disabled={buying} style={{ ...btnStyle, background: '#10b981', color: 'white', flex: 1, padding: '1.2rem', fontSize: '1.1rem' }}>
-                                        {buying ? 'Procesando...' : 'CONFIRMAR Y ENVIAR COMPROBANTE'}
+                                        <TicketIcon size={20} /> AGREGAR #{previewNumber.toString().padStart(4, '0')}
+                                    </button>
+                                    <button
+                                        onClick={spinMachine}
+                                        className="btn"
+                                        style={{ background: '#fff', color: '#6366f1', border: '1px solid #6366f1', padding: '0.8rem 1.5rem' }}
+                                    >
+                                        Intentar otro
                                     </button>
                                 </div>
-                            </form>
+                            )}
+                            {spinning && <p style={{ color: '#6366f1', fontWeight: 'bold' }}>Buscando tu número de la suerte...</p>}
+                        </div>
+                    )}
+
+                    {/* Grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(48px, 1fr))', gap: '0.4rem' }}>
+                        {visibleNumbers.map(num => {
+                            const status = ticketStatuses[num];
+                            const isSelected = selectedNumbers.includes(num);
+
+                            let bg = '#fff';
+                            let borderColor = '#e2e8f0';
+                            let color = '#334155';
+                            let cursor = 'pointer';
+
+                            if (status === 'paid') {
+                                bg = '#10b981'; // Green
+                                color = 'white';
+                                borderColor = '#059669';
+                                cursor = 'not-allowed';
+                            } else if (status === 'reserved') {
+                                bg = '#94a3b8'; // Gray
+                                color = 'white';
+                                borderColor = '#64748b';
+                                cursor = 'not-allowed';
+                            } else if (isSelected) {
+                                bg = '#fff1f2';
+                                color = '#be123c';
+                                borderColor = '#fb7185';
+                            }
+
+                            return (
+                                <button
+                                    key={num}
+                                    disabled={!!status}
+                                    onClick={() => toggleNumber(num)}
+                                    style={{
+                                        padding: '0.5rem',
+                                        borderRadius: '0.5rem',
+                                        border: `1px solid ${borderColor}`,
+                                        background: bg,
+                                        color: color,
+                                        cursor: cursor,
+                                        fontWeight: isSelected || status ? 'bold' : 'normal',
+                                        transition: 'all 0.1s',
+                                        transform: isSelected ? 'scale(1.1)' : 'scale(1)'
+                                    }}
+                                >
+                                    {num.toString().padStart(4, '0')}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Legend */}
+                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1rem', fontSize: '0.9rem', color: '#64748b' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><div style={{ width: 12, height: 12, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '2px' }}></div> Disponible</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><div style={{ width: 12, height: 12, background: '#94a3b8', borderRadius: '2px' }}></div> Apartado</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><div style={{ width: 12, height: 12, background: '#10b981', borderRadius: '2px' }}></div> Vendido</div>
+                    </div>
+
+                    {/* Cart */}
+                    {selectedNumbers.length > 0 && (
+                        <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'fadeIn 0.2s', background: '#fff1f2', padding: '1rem', borderRadius: '1rem', border: '1px solid #fecdd3' }}>
+                            <p style={{ margin: '0 0 1rem 0', color: '#be123c', textAlign: 'center' }}>
+                                Has seleccionado <strong>{selectedNumbers.length}</strong> ticket{selectedNumbers.length > 1 ? 's' : ''}.
+                                <br />
+                                Total: <strong style={{ fontSize: '1.4rem' }}>{formatPrice(selectedNumbers.length * raffle.price)}</strong>
+                            </p>
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '1rem' }}>
+                                {selectedNumbers.map(n => (
+                                    <div key={n} style={{ background: 'white', padding: '0.3rem 0.6rem', borderRadius: '0.4rem', border: '1px solid #fda4af', fontSize: '1rem', color: '#be123c', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        {n.toString().padStart(4, '0')}
+                                        <button
+                                            onClick={() => removeNumber(n)}
+                                            style={{ border: 'none', background: '#fee2e2', color: '#ef4444', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}
+                                            title="Eliminar ticket"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                            <button onClick={handleBuyClick} className="btn" style={{ background: '#10b981', ...buyBtnBase, width: '100%', justifyContent: 'center' }}>
+                                <TicketIcon size={24} />
+                                Continuar al Pago
+                            </button>
                         </div>
                     )}
                 </div>
+
+
+
+                {/* INLINE User Form (No Modal) */}
+                {selectedNumbers.length > 0 && showUserForm && (
+                    <div id="checkout-form" style={{ marginTop: '3rem', padding: '2rem', background: '#f8fafc', borderRadius: '1rem', border: '1px solid #e2e8f0' }}>
+                        <h2 style={{ marginTop: 0, color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem', marginBottom: '2rem' }}>👇 Completa tus datos aquí</h2>
+
+                        <h4 style={{ margin: '0 0 1rem 0', color: '#334155' }}>1. Selecciona Método de Pago:</h4>
+
+                        {!selectedPayment ? (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+                                {paymentMethods.map(pm => (
+                                    <button
+                                        key={pm.id}
+                                        onClick={() => setSelectedPayment(pm)}
+                                        style={{
+                                            border: '1px solid #e2e8f0', borderRadius: '0.5rem', background: 'white', padding: '1rem',
+                                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', cursor: 'pointer',
+                                            transition: 'all 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                                        }}
+                                        className="payment-method-btn"
+                                    >
+                                        {pm.image_url ? (
+                                            <img src={pm.image_url} alt={pm.bank_name} style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+                                        ) : (
+                                            <div style={{ width: '40px', height: '40px', background: '#e2e8f0', borderRadius: '0.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🏦</div>
+                                        )}
+                                        <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#475569', textAlign: 'center' }}>{pm.bank_name}</span>
+                                    </button>
+                                ))}
+                                {paymentMethods.length === 0 && <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>No hay métodos de pago configurados.</p>}
+                            </div>
+                        ) : (
+                            <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '0.8rem', border: '1px solid #e2e8f0', animation: 'fadeIn 0.3s', marginBottom: '2rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                        {selectedPayment.image_url && <img src={selectedPayment.image_url} alt={selectedPayment.bank_name} style={{ width: '50px', height: '50px', objectFit: 'contain', background: 'white', borderRadius: '0.4rem', border: '1px solid #e2e8f0' }} />}
+                                        <div>
+                                            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>{selectedPayment.bank_name}</h3>
+                                            <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>{selectedPayment.account_type}</p>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setSelectedPayment(null)} style={{ color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '600' }}>Cambiar</button>
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '1rem', color: '#334155' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e2e8f0', paddingBottom: '0.5rem' }}>
+                                        <span style={{ color: '#64748b' }}>Cuenta:</span>
+                                        <span style={{ fontFamily: 'monospace', fontWeight: 'bold', fontSize: '1.1rem' }}>{selectedPayment.account_number}</span>
+                                    </div>
+                                    {selectedPayment.account_owner && (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <span style={{ color: '#64748b' }}>Titular:</span>
+                                            <span style={{ fontWeight: '500' }}>{selectedPayment.account_owner}</span>
+                                        </div>
+                                    )}
+                                    {selectedPayment.account_id_number && (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <span style={{ color: '#64748b' }}>ID/Cédula:</span>
+                                            <span style={{ fontWeight: '500' }}>{selectedPayment.account_id_number}</span>
+                                        </div>
+                                    )}
+                                    {selectedPayment.bank_phone && (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <span style={{ color: '#64748b' }}>Teléfono (Pago Móvil):</span>
+                                            <span style={{ fontWeight: '500' }}>{selectedPayment.bank_phone}</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: '#64748b', fontStyle: 'italic' }}>
+                                    {selectedPayment.instructions || 'Realiza la transferencia y adjunta el comprobante abajo.'}
+                                </div>
+                            </div>
+                        )}
+
+                        <h4 style={{ margin: '0 0 1rem 0', color: '#334155' }}>2. Ingresa tus Datos y Comprobante:</h4>
+                        <form onSubmit={confirmPurchase} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <input
+                                required placeholder="Nombre Completo"
+                                value={userDetails.name}
+                                onChange={e => setUserDetails({ ...userDetails, name: e.target.value })}
+                                style={inputStyle}
+                            />
+                            <input
+                                required type="email" placeholder="Correo Electrónico (para recibir tus tickets)"
+                                value={userDetails.email}
+                                onChange={e => setUserDetails({ ...userDetails, email: e.target.value })}
+                                style={inputStyle}
+                            />
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <select
+                                    value={countryCode}
+                                    onChange={e => setCountryCode(e.target.value)}
+                                    style={{ ...inputStyle, width: '90px' }}
+                                >
+                                    {COUNTRY_CODES.map(c => (
+                                        <option key={c.code} value={c.code}>{c.country} {c.code}</option>
+                                    ))}
+                                </select>
+                                <div style={{ position: 'relative', flex: 1 }}>
+                                    <input
+                                        required placeholder="WhatsApp / Teléfono"
+                                        value={localPhone}
+                                        onChange={e => {
+                                            const val = e.target.value.replace(/\D/g, ''); // Only numbers
+                                            if (val.length <= 15) setLocalPhone(val);
+                                        }}
+                                        style={{ ...inputStyle, width: '100%', paddingRight: '2rem' }}
+                                        type="tel"
+                                    />
+                                    {localPhone.length > 0 && (
+                                        <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
+                                            {localPhone.length < 7 ? (
+                                                <span title="Número muy corto" style={{ color: '#fbbf24', fontSize: '1.2rem' }}>⚠️</span>
+                                            ) : (
+                                                <span title="Válido" style={{ color: '#10b981', fontSize: '1.2rem' }}>✅</span>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <input
+                                placeholder="Cédula / DNI (Opcional)"
+                                value={userDetails.idNumber}
+                                onChange={e => setUserDetails({ ...userDetails, idNumber: e.target.value })}
+                                style={inputStyle}
+                            />
+
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.9rem', color: '#334155', marginBottom: '0.3rem' }}>📸 Comprobante de Pago:</label>
+                                <input
+                                    type="file"
+                                    accept="image/*,application/pdf"
+                                    onChange={e => setReceiptFile(e.target.files ? e.target.files[0] : null)}
+                                    style={{ ...inputStyle, padding: '0.4rem' }}
+                                />
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                                <button type="submit" disabled={buying} style={{ ...btnStyle, background: '#10b981', color: 'white', flex: 1, padding: '1.2rem', fontSize: '1.1rem' }}>
+                                    {buying ? 'Procesando...' : 'CONFIRMAR Y ENVIAR COMPROBANTE'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                )}
             </div>
         </div>
     );
