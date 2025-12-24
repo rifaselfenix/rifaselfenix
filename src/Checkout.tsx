@@ -776,8 +776,8 @@ export default function Checkout() {
 
                     {/* INLINE User Form (No Modal) */}
                     {selectedNumbers.length > 0 && showUserForm && (
-                        <div id="checkout-form" style={{ marginTop: '3rem', padding: '2rem', background: 'white', borderRadius: '1rem', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', border: '1px solid #e2e8f0', animation: 'fadeIn 0.5s' }}>
-                            <h2 style={{ marginTop: 0, color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem', marginBottom: '2rem' }}>🚀 Completa tus datos</h2>
+                        <div id="checkout-form" style={{ marginTop: '3rem', padding: '2rem', background: '#f8fafc', borderRadius: '1rem', border: '1px solid #e2e8f0' }}>
+                            <h2 style={{ marginTop: 0, color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem', marginBottom: '2rem' }}>👇 Completa tus datos aquí</h2>
 
                             <h4 style={{ margin: '0 0 1rem 0', color: '#334155' }}>1. Selecciona Método de Pago:</h4>
 
