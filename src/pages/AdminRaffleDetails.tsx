@@ -297,13 +297,16 @@ export default function AdminRaffleDetails() {
         if (!confirm(`¿Verificar pago de ${group.client_name} por ${group.tickets.length} tickets?`)) return;
 
         const ticketIds = group.tickets.map((t: any) => t.id);
-        const { error } = await supabase
+        const { data, error } = await supabase
             .from('tickets')
             .update({ status: 'paid' })
-            .in('id', ticketIds);
+            .in('id', ticketIds)
+            .select();
 
         if (error) {
             alert('Error verificando: ' + error.message);
+        } else if (!data || data.length === 0) {
+            alert('❌ ERROR CRÍTICO: No se guardaron los cambios. Es posible que falten permisos en la tabla "tickets". Ejecuta el script SQL "fix_tickets_permissions.sql".');
         } else {
             // Optimistic Update
             setTickets(tickets.map(t => ticketIds.includes(t.id) ? { ...t, status: 'paid' } : t));
