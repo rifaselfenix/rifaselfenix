@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import confetti from 'canvas-confetti';
-import { Ticket as TicketIcon, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { Ticket as TicketIcon, ChevronLeft, ChevronRight, Search, Copy } from 'lucide-react';
 
 const COUNTRY_CODES = [
     { code: '+58', country: 'VE' },
@@ -446,6 +446,26 @@ export default function Checkout() {
                     >
                         📲 Enviarme Link a mi WhatsApp
                     </a>
+
+                    <button
+                        onClick={() => {
+                            navigator.clipboard.writeText(whatsappMsg).then(() => alert('¡Enlace copiado!'));
+                        }}
+                        className="btn"
+                        style={{
+                            background: '#e0f2fe',
+                            color: '#0284c7',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.5rem',
+                            width: '100%',
+                            border: 'none',
+                            marginBottom: '1rem'
+                        }}
+                    >
+                        <Copy size={20} /> Copiar Enlace
+                    </button>
 
                     <Link to="/" className="btn" style={{ background: '#f1f5f9', color: '#64748b', display: 'block', textAlign: 'center' }}>
                         Volver al Inicio
