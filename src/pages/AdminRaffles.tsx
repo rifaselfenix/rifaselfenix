@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 export default function AdminRaffles() {
     const [raffles, setRaffles] = useState<any[]>([]);
     const [showForm, setShowForm] = useState(false);
-    const [formData, setFormData] = useState({ title: '', price: '', description: '', image_url: '', currency: 'USD' });
+    const [formData, setFormData] = useState({ title: '', price: '', description: '', image_url: '', currency: 'USD', thank_you_message: '' });
     const [uploading, setUploading] = useState(false);
 
     const [currencies, setCurrencies] = useState<any[]>([]);
@@ -64,12 +64,13 @@ export default function AdminRaffles() {
             price: parseFloat(formData.price),
             description: formData.description,
             image_url: formData.image_url,
-            status: 'on_sale'
+            status: 'on_sale',
+            thank_you_message: formData.thank_you_message || '¡Gracias por participar! Tus tickets están reservados. Te notificaremos cuando tu pago sea verificado.'
         }]);
 
         if (!error) {
             setShowForm(false);
-            setFormData({ title: '', price: '', description: '', image_url: '', currency: 'USD' });
+            setFormData({ title: '', price: '', description: '', image_url: '', currency: 'USD', thank_you_message: '' });
             fetchRaffles();
         } else {
             alert('Error creando rifa: ' + error.message);
@@ -138,6 +139,16 @@ export default function AdminRaffles() {
                                     <option value="USD">USD ($)</option>
                                 )}
                             </select>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <label style={{ marginBottom: '0.3rem', fontWeight: 600, color: '#334155', fontSize: '0.9rem' }}>Mensaje de Agradecimiento (Opcional)</label>
+                            <textarea
+                                placeholder="Ej: ¡Gracias! Tu orden está en revisión. Te avisaremos al aprobar."
+                                value={formData.thank_you_message}
+                                onChange={e => setFormData({ ...formData, thank_you_message: e.target.value })}
+                                style={{ ...inputStyle, fontFamily: 'inherit', resize: 'vertical', minHeight: '80px' }}
+                            />
                         </div>
 
                         {/* Image Fields */}
