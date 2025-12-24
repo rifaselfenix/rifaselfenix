@@ -648,17 +648,36 @@ export default function Checkout() {
                     {showRouletteModal && (
                         <div style={{
                             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                            background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 110,
-                            backdropFilter: 'blur(5px)'
+                            background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 110,
+                            backdropFilter: 'blur(5px)', padding: '1rem', overflowY: 'auto'
                         }}>
-                            <div style={{ background: '#1e293b', padding: '2rem 3rem', borderRadius: '1.5rem', width: '90%', maxWidth: '600px', boxShadow: '0 25px 30px -5px rgba(0, 0, 0, 0.3)', border: '1px solid #475569', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', maxHeight: '95vh', overflowY: 'auto' }}>
+                            <div style={{ background: '#1e293b', padding: '2rem 1.5rem', borderRadius: '1.5rem', width: '100%', maxWidth: '600px', boxShadow: '0 25px 30px -5px rgba(0, 0, 0, 0.3)', border: '1px solid #475569', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '10vh' }}>
                                 <h2 style={{ fontSize: '2rem', margin: '0 0 1rem 0', background: '-webkit-linear-gradient(45deg, #f59e0b, #d97706)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>⚡ Ráfaga de Suerte</h2>
                                 <p style={{ color: '#94a3b8', textAlign: 'center', marginBottom: '2rem' }}>Selecciona cuántos tickets quieres y deja que el azar decida.</p>
 
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
                                     <button className="btn" onClick={() => setRouletteCount(Math.max(1, rouletteCount - 1))} style={{ background: '#334155', padding: '0.5rem 1rem' }}>-</button>
-                                    <span style={{ fontSize: '2rem', fontWeight: 'bold', minWidth: '50px', textAlign: 'center' }}>{rouletteCount}</span>
-                                    <button className="btn" onClick={() => setRouletteCount(Math.min(10, rouletteCount + 1))} style={{ background: '#334155', padding: '0.5rem 1rem' }}>+</button>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="1000"
+                                        value={rouletteCount}
+                                        onChange={(e) => {
+                                            const val = parseInt(e.target.value);
+                                            if (!isNaN(val)) setRouletteCount(Math.min(1000, Math.max(1, val)));
+                                        }}
+                                        style={{
+                                            fontSize: '2rem',
+                                            fontWeight: 'bold',
+                                            width: '100px',
+                                            textAlign: 'center',
+                                            background: 'transparent',
+                                            border: 'none',
+                                            color: 'white',
+                                            borderBottom: '2px solid #475569'
+                                        }}
+                                    />
+                                    <button className="btn" onClick={() => setRouletteCount(Math.min(1000, rouletteCount + 1))} style={{ background: '#334155', padding: '0.5rem 1rem' }}>+</button>
                                 </div>
 
                                 {rouletteResults.length === 0 ? (
