@@ -812,13 +812,27 @@ export default function Checkout() {
                                                 <option key={c.code} value={c.code}>{c.country} {c.code}</option>
                                             ))}
                                         </select>
-                                        <input
-                                            required placeholder="WhatsApp / Teléfono"
-                                            value={localPhone}
-                                            onChange={e => setLocalPhone(e.target.value)}
-                                            style={{ ...inputStyle, flex: 1 }}
-                                            type="tel"
-                                        />
+                                        <div style={{ position: 'relative', flex: 1 }}>
+                                            <input
+                                                required placeholder="WhatsApp / Teléfono"
+                                                value={localPhone}
+                                                onChange={e => {
+                                                    const val = e.target.value.replace(/\D/g, ''); // Only numbers
+                                                    if (val.length <= 15) setLocalPhone(val);
+                                                }}
+                                                style={{ ...inputStyle, width: '100%', paddingRight: '2rem' }}
+                                                type="tel"
+                                            />
+                                            {localPhone.length > 0 && (
+                                                <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
+                                                    {localPhone.length < 7 ? (
+                                                        <span title="Número muy corto" style={{ color: '#fbbf24', fontSize: '1.2rem' }}>⚠️</span>
+                                                    ) : (
+                                                        <span title="Válido" style={{ color: '#10b981', fontSize: '1.2rem' }}>✅</span>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                     <input
                                         placeholder="Cédula / DNI (Opcional)"
