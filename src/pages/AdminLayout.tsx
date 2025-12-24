@@ -32,7 +32,7 @@ export default function AdminLayout() {
     const handleLogout = async (e: React.MouseEvent) => {
         e.preventDefault();
         await supabase.auth.signOut();
-        navigate('/login');
+        navigate('/');
     };
 
     if (checking) return <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>Cargando panel...</div>;
