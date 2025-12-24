@@ -306,7 +306,10 @@ export default function Checkout() {
     const handleBuyClick = () => {
         if (!raffle || selectedNumbers.length === 0) return;
         setShowUserForm(true);
-        setSelectedPayment(null);
+        // Scroll to form
+        setTimeout(() => {
+            document.getElementById('checkout-form')?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
     };
 
     const confirmPurchase = async (e: React.FormEvent) => {
@@ -672,32 +675,31 @@ export default function Checkout() {
                         </div>
 
                         {/* Cart */}
-                        {selectedNumbers.length > 0 && (
-                            <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'fadeIn 0.2s', background: '#fff1f2', padding: '1rem', borderRadius: '1rem', border: '1px solid #fecdd3' }}>
-                                <p style={{ margin: '0 0 1rem 0', color: '#be123c', textAlign: 'center' }}>
-                                    Has seleccionado <strong>{selectedNumbers.length}</strong> ticket{selectedNumbers.length > 1 ? 's' : ''}.
-                                    <br />
-                                    Total: <strong style={{ fontSize: '1.4rem' }}>{formatPrice(selectedNumbers.length * raffle.price)}</strong>
-                                </p>
-                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '1rem' }}>
-                                    {selectedNumbers.map(n => (
-                                        <div key={n} style={{ background: 'white', padding: '0.3rem 0.6rem', borderRadius: '0.4rem', border: '1px solid #fda4af', fontSize: '1rem', color: '#be123c', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            {n.toString().padStart(4, '0')}
-                                            <button
-                                                onClick={() => removeNumber(n)}
-                                                style={{ border: 'none', background: '#fee2e2', color: '#ef4444', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}
-                                                title="Eliminar ticket"
-                                            >
-                                                ✕
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                                <button onClick={handleBuyClick} className="btn" style={{ background: '#10b981', ...buyBtnBase, width: '100%', justifyContent: 'center' }}>
-                                    <TicketIcon size={24} />
-                                    Confirmar Compra
-                                </button>
+                        <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'fadeIn 0.2s', background: '#fff1f2', padding: '1rem', borderRadius: '1rem', border: '1px solid #fecdd3' }}>
+                            <p style={{ margin: '0 0 1rem 0', color: '#be123c', textAlign: 'center' }}>
+                                Has seleccionado <strong>{selectedNumbers.length}</strong> ticket{selectedNumbers.length > 1 ? 's' : ''}.
+                                <br />
+                                Total: <strong style={{ fontSize: '1.4rem' }}>{formatPrice(selectedNumbers.length * raffle.price)}</strong>
+                            </p>
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '1rem' }}>
+                                {selectedNumbers.map(n => (
+                                    <div key={n} style={{ background: 'white', padding: '0.3rem 0.6rem', borderRadius: '0.4rem', border: '1px solid #fda4af', fontSize: '1rem', color: '#be123c', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        {n.toString().padStart(4, '0')}
+                                        <button
+                                            onClick={() => removeNumber(n)}
+                                            style={{ border: 'none', background: '#fee2e2', color: '#ef4444', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}
+                                            title="Eliminar ticket"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                ))}
                             </div>
+                            <button onClick={handleBuyClick} className="btn" style={{ background: '#10b981', ...buyBtnBase, width: '100%', justifyContent: 'center' }}>
+                                <TicketIcon size={24} />
+                                Continuar al Pago
+                            </button>
+                        </div>
                         )}
                     </div>
 
@@ -772,150 +774,148 @@ export default function Checkout() {
                         </div>
                     )}
 
-                    {/* Modal User Form */}
-                    {showUserForm && (
-                        <div style={{
-                            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                            background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
-                            backdropFilter: 'blur(5px)'
-                        }}>
-                            <div style={{ background: 'white', padding: '2rem', borderRadius: '1rem', width: '90%', maxWidth: '500px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', maxHeight: '90vh', overflowY: 'auto' }}>
-                                <h2 style={{ marginTop: 0, color: '#1e293b' }}>🚀 Finaliza tu compra</h2>
-                                <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>
-                                    Total a pagar: <strong>{formatPrice(selectedNumbers.length * raffle.price)}</strong>
-                                </p>
+                    {/* INLINE User Form (No Modal) */}
+                    {selectedNumbers.length > 0 && showUserForm && (
+                        <div id="checkout-form" style={{ marginTop: '3rem', padding: '2rem', background: 'white', borderRadius: '1rem', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', border: '1px solid #e2e8f0', animation: 'fadeIn 0.5s' }}>
+                            <h2 style={{ marginTop: 0, color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem', marginBottom: '2rem' }}>🚀 Completa tus datos</h2>
 
-                                {/* Step 1: Payment Method Selection */}
-                                <div style={{ marginBottom: '2rem' }}>
-                                    <h4 style={{ margin: '0 0 1rem 0', color: '#334155' }}>1. Selecciona Método de Pago:</h4>
+                            <h4 style={{ margin: '0 0 1rem 0', color: '#334155' }}>1. Selecciona Método de Pago:</h4>
 
-                                    {!selectedPayment ? (
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '1rem' }}>
-                                            {paymentMethods.map(pm => (
-                                                <button
-                                                    key={pm.id}
-                                                    onClick={() => setSelectedPayment(pm)}
-                                                    style={{
-                                                        border: '1px solid #e2e8f0', borderRadius: '0.5rem', background: 'white', padding: '1rem',
-                                                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', cursor: 'pointer',
-                                                        transition: 'all 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                                                    }}
-                                                    className="payment-method-btn"
-                                                >
-                                                    {pm.image_url ? (
-                                                        <img src={pm.image_url} alt={pm.bank_name} style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
-                                                    ) : (
-                                                        <div style={{ width: '40px', height: '40px', background: '#e2e8f0', borderRadius: '0.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🏦</div>
-                                                    )}
-                                                    <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#475569', textAlign: 'center' }}>{pm.bank_name}</span>
-                                                </button>
-                                            ))}
-                                            {paymentMethods.length === 0 && <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>No hay métodos de pago configurados.</p>}
-                                        </div>
-                                    ) : (
-                                        <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '0.8rem', border: '1px solid #e2e8f0', animation: 'fadeIn 0.3s' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                                    {selectedPayment.image_url && <img src={selectedPayment.image_url} alt={selectedPayment.bank_name} style={{ width: '50px', height: '50px', objectFit: 'contain', background: 'white', borderRadius: '0.4rem', border: '1px solid #e2e8f0' }} />}
-                                                    <div>
-                                                        <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>{selectedPayment.bank_name}</h3>
-                                                        <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>{selectedPayment.account_type}</p>
-                                                    </div>
-                                                </div>
-                                                <button onClick={() => setSelectedPayment(null)} style={{ color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '600' }}>Cambiar</button>
+                            {!selectedPayment ? (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+                                    {paymentMethods.map(pm => (
+                                        <button
+                                            key={pm.id}
+                                            onClick={() => setSelectedPayment(pm)}
+                                            style={{
+                                                border: '1px solid #e2e8f0', borderRadius: '0.5rem', background: 'white', padding: '1rem',
+                                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', cursor: 'pointer',
+                                                transition: 'all 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                                            }}
+                                            className="payment-method-btn"
+                                        >
+                                            {pm.image_url ? (
+                                                <img src={pm.image_url} alt={pm.bank_name} style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+                                            ) : (
+                                                <div style={{ width: '40px', height: '40px', background: '#e2e8f0', borderRadius: '0.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🏦</div>
+                                            )}
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#475569', textAlign: 'center' }}>{pm.bank_name}</span>
+                                        </button>
+                                    ))}
+                                    {paymentMethods.length === 0 && <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>No hay métodos de pago configurados.</p>}
+                                </div>
+                            ) : (
+                                <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '0.8rem', border: '1px solid #e2e8f0', animation: 'fadeIn 0.3s', marginBottom: '2rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                            {selectedPayment.image_url && <img src={selectedPayment.image_url} alt={selectedPayment.bank_name} style={{ width: '50px', height: '50px', objectFit: 'contain', background: 'white', borderRadius: '0.4rem', border: '1px solid #e2e8f0' }} />}
+                                            <div>
+                                                <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>{selectedPayment.bank_name}</h3>
+                                                <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>{selectedPayment.account_type}</p>
                                             </div>
+                                        </div>
+                                        <button onClick={() => setSelectedPayment(null)} style={{ color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '600' }}>Cambiar</button>
+                                    </div>
 
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '1rem', color: '#334155' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e2e8f0', paddingBottom: '0.5rem' }}>
-                                                    <span style={{ color: '#64748b' }}>Cuenta:</span>
-                                                    <span style={{ fontFamily: 'monospace', fontWeight: 'bold', fontSize: '1.1rem' }}>{selectedPayment.account_number}</span>
-                                                </div>
-                                                {selectedPayment.account_owner && (
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e2e8f0', paddingBottom: '0.5rem' }}>
-                                                        <span style={{ color: '#64748b' }}>Titular:</span>
-                                                        <span style={{ fontWeight: '500' }}>{selectedPayment.account_owner}</span>
-                                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '1rem', color: '#334155' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e2e8f0', paddingBottom: '0.5rem' }}>
+                                            <span style={{ color: '#64748b' }}>Cuenta:</span>
+                                            <span style={{ fontFamily: 'monospace', fontWeight: 'bold', fontSize: '1.1rem' }}>{selectedPayment.account_number}</span>
+                                        </div>
+                                        {selectedPayment.account_owner && (
+                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <span style={{ color: '#64748b' }}>Titular:</span>
+                                                <span style={{ fontWeight: '500' }}>{selectedPayment.account_owner}</span>
+                                            </div>
+                                        )}
+                                        {selectedPayment.account_id_number && (
+                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <span style={{ color: '#64748b' }}>ID/Cédula:</span>
+                                                <span style={{ fontWeight: '500' }}>{selectedPayment.account_id_number}</span>
+                                            </div>
+                                        )}
+                                        {selectedPayment.bank_phone && (
+                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <span style={{ color: '#64748b' }}>Teléfono (Pago Móvil):</span>
+                                                <span style={{ fontWeight: '500' }}>{selectedPayment.bank_phone}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: '#64748b', fontStyle: 'italic' }}>
+                                        {selectedPayment.instructions || 'Realiza la transferencia y adjunta el comprobante abajo.'}
+                                    </div>
+                                </div>
+                            )}
+
+                            <h4 style={{ margin: '0 0 1rem 0', color: '#334155' }}>2. Ingresa tus Datos y Comprobante:</h4>
+                            <form onSubmit={confirmPurchase} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <input
+                                    required placeholder="Nombre Completo"
+                                    value={userDetails.name}
+                                    onChange={e => setUserDetails({ ...userDetails, name: e.target.value })}
+                                    style={inputStyle}
+                                />
+                                <input
+                                    required type="email" placeholder="Correo Electrónico (para recibir tus tickets)"
+                                    value={userDetails.email}
+                                    onChange={e => setUserDetails({ ...userDetails, email: e.target.value })}
+                                    style={inputStyle}
+                                />
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <select
+                                        value={countryCode}
+                                        onChange={e => setCountryCode(e.target.value)}
+                                        style={{ ...inputStyle, width: '90px' }}
+                                    >
+                                        {COUNTRY_CODES.map(c => (
+                                            <option key={c.code} value={c.code}>{c.country} {c.code}</option>
+                                        ))}
+                                    </select>
+                                    <div style={{ position: 'relative', flex: 1 }}>
+                                        <input
+                                            required placeholder="WhatsApp / Teléfono"
+                                            value={localPhone}
+                                            onChange={e => {
+                                                const val = e.target.value.replace(/\D/g, ''); // Only numbers
+                                                if (val.length <= 15) setLocalPhone(val);
+                                            }}
+                                            style={{ ...inputStyle, width: '100%', paddingRight: '2rem' }}
+                                            type="tel"
+                                        />
+                                        {localPhone.length > 0 && (
+                                            <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
+                                                {localPhone.length < 7 ? (
+                                                    <span title="Número muy corto" style={{ color: '#fbbf24', fontSize: '1.2rem' }}>⚠️</span>
+                                                ) : (
+                                                    <span title="Válido" style={{ color: '#10b981', fontSize: '1.2rem' }}>✅</span>
                                                 )}
                                             </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <input
+                                    placeholder="Cédula / DNI (Opcional)"
+                                    value={userDetails.idNumber}
+                                    onChange={e => setUserDetails({ ...userDetails, idNumber: e.target.value })}
+                                    style={inputStyle}
+                                />
 
-                                            <p style={{ fontSize: '0.85rem', color: '#ef4444', marginTop: '1rem', textAlign: 'center', background: '#fef2f2', padding: '0.5rem', borderRadius: '0.4rem' }}>
-                                                ⚠️ Realiza el pago exacto y guarda la captura.
-                                            </p>
-                                        </div>
-                                    )}
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.9rem', color: '#334155', marginBottom: '0.3rem' }}>📸 Comprobante de Pago:</label>
+                                    <input
+                                        type="file"
+                                        accept="image/*,application/pdf"
+                                        onChange={e => setReceiptFile(e.target.files ? e.target.files[0] : null)}
+                                        style={{ ...inputStyle, padding: '0.4rem' }}
+                                    />
                                 </div>
 
-                                <h4 style={{ margin: '0 0 1rem 0', color: '#334155' }}>2. Ingresa tus Datos y Comprobante:</h4>
-                                <form onSubmit={confirmPurchase} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                    <input
-                                        required placeholder="Nombre Completo"
-                                        value={userDetails.name}
-                                        onChange={e => setUserDetails({ ...userDetails, name: e.target.value })}
-                                        style={inputStyle}
-                                    />
-                                    <input
-                                        required type="email" placeholder="Correo Electrónico (para recibir tus tickets)"
-                                        value={userDetails.email}
-                                        onChange={e => setUserDetails({ ...userDetails, email: e.target.value })}
-                                        style={inputStyle}
-                                    />
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        <select
-                                            value={countryCode}
-                                            onChange={e => setCountryCode(e.target.value)}
-                                            style={{ ...inputStyle, width: '90px' }}
-                                        >
-                                            {COUNTRY_CODES.map(c => (
-                                                <option key={c.code} value={c.code}>{c.country} {c.code}</option>
-                                            ))}
-                                        </select>
-                                        <div style={{ position: 'relative', flex: 1 }}>
-                                            <input
-                                                required placeholder="WhatsApp / Teléfono"
-                                                value={localPhone}
-                                                onChange={e => {
-                                                    const val = e.target.value.replace(/\D/g, ''); // Only numbers
-                                                    if (val.length <= 15) setLocalPhone(val);
-                                                }}
-                                                style={{ ...inputStyle, width: '100%', paddingRight: '2rem' }}
-                                                type="tel"
-                                            />
-                                            {localPhone.length > 0 && (
-                                                <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
-                                                    {localPhone.length < 7 ? (
-                                                        <span title="Número muy corto" style={{ color: '#fbbf24', fontSize: '1.2rem' }}>⚠️</span>
-                                                    ) : (
-                                                        <span title="Válido" style={{ color: '#10b981', fontSize: '1.2rem' }}>✅</span>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <input
-                                        placeholder="Cédula / DNI (Opcional)"
-                                        value={userDetails.idNumber}
-                                        onChange={e => setUserDetails({ ...userDetails, idNumber: e.target.value })}
-                                        style={inputStyle}
-                                    />
-
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '0.9rem', color: '#334155', marginBottom: '0.3rem' }}>📸 Comprobante de Pago:</label>
-                                        <input
-                                            type="file"
-                                            accept="image/*,application/pdf"
-                                            onChange={e => setReceiptFile(e.target.files ? e.target.files[0] : null)}
-                                            style={{ ...inputStyle, padding: '0.4rem' }}
-                                        />
-                                    </div>
-
-                                    <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                                        <button type="button" onClick={() => setShowUserForm(false)} style={{ ...btnStyle, background: '#e2e8f0', color: '#475569' }}>Cancelar</button>
-                                        <button type="submit" disabled={buying} style={{ ...btnStyle, background: '#10b981', color: 'white', flex: 1 }}>
-                                            {buying ? 'Procesando...' : 'ENVIAR COMPROBANTE'}
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
+                                <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                                    <button type="submit" disabled={buying} style={{ ...btnStyle, background: '#10b981', color: 'white', flex: 1, padding: '1.2rem', fontSize: '1.1rem' }}>
+                                        {buying ? 'Procesando...' : 'CONFIRMAR Y ENVIAR COMPROBANTE'}
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     )}
                 </div>
