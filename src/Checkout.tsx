@@ -353,7 +353,6 @@ export default function Checkout() {
             if (error) throw error;
 
             // Generate, Upload PDF and Notify
-            const ticketLinks: string[] = [];
             // NEW FLOW: No auto-download, just success screen
             setPurchaseSummary({
                 ticketCount: selectedNumbers.length,
