@@ -701,6 +701,7 @@ export default function Checkout() {
                                     Continuar al Pago
                                 </button>
                             </div>
+                        )}
                     </div>
 
                     {/* Advanced Roulette Modal */}
