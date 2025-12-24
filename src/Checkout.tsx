@@ -47,6 +47,10 @@ export default function Checkout() {
     const [showUserForm, setShowUserForm] = useState(false);
     const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
+    // --- Success State ---
+    const [purchaseComplete, setPurchaseComplete] = useState(false);
+    const [purchaseSummary, setPurchaseSummary] = useState<any>(null);
+
     // --- Grid States ---
     const [currentPage, setCurrentPage] = useState(0);
     const pageSize = 100;
@@ -347,54 +351,26 @@ export default function Checkout() {
 
             // Generate, Upload PDF and Notify
             const ticketLinks: string[] = [];
-            const { generateTicketPDF, downloadPDF } = await import('./lib/pdfGenerator');
-            const { sendTicketEmail } = await import('./lib/notifications');
+            // NEW FLOW: No auto-download, just success screen
+            setPurchaseSummary({
+                ticketCount: selectedNumbers.length,
+                totalAmount: selectedNumbers.length * raffle.price,
+                phone: userDetails.phone,
+                name: userDetails.name
+            });
+            setPurchaseComplete(true);
 
-            for (const num of selectedNumbers) {
-                const pdfBytes = await generateTicketPDF({
-                    ticketNumber: num,
-                    raffleTitle: raffle.title,
-                    price: raffle.price,
-                    date: new Date().toLocaleDateString(),
-                    status: 'reserved'
-                });
-
-                // Download locally
-                downloadPDF(pdfBytes, `Ticket-${num}.pdf`);
-
-                // Upload to Supabase Storage
-                try {
-                    const fileName = `Ticket-${num}-${Date.now()}.pdf`;
-                    const { error: uploadErr } = await supabase.storage
-                        .from('public')
-                        .upload(`tickets_auto/${fileName}`, pdfBytes, { contentType: 'application/pdf', upsert: true });
-
-                    if (!uploadErr) {
-                        const { data: pubUrl } = supabase.storage.from('public').getPublicUrl(`tickets_auto/${fileName}`);
-                        ticketLinks.push(pubUrl.publicUrl);
-                    }
-                } catch (err) {
-                    console.error("Error uploading PDF", err);
-                }
-            }
-
-            // Send Email NOTIFICATION
-            if (ticketLinks.length > 0) {
-                await sendTicketEmail(userDetails.email, userDetails.name, ticketLinks);
-            }
-
-            alert(`¡Solicitud enviada ${userDetails.name}! Tus tickets están en verificación. Se marcarán como VENDIDOS una vez confirmemos el pago.`);
-
+            // Optimistic update
             const newStatuses = { ...ticketStatuses };
             selectedNumbers.forEach(n => newStatuses[n] = 'reserved');
             setTicketStatuses(newStatuses);
             setSoldTickets([...soldTickets, ...selectedNumbers]);
 
+            // Clear some state but keep userDetails for the summary screen if needed
             setSelectedNumbers([]);
             setShowUserForm(false);
             setReceiptFile(null);
             setSlots([0, 0, 0, 0]);
-            setUserDetails({ name: '', phone: '', email: '', idNumber: '' });
             setSelectedPayment(null);
 
         } catch (error: any) {
@@ -417,6 +393,67 @@ export default function Checkout() {
     if (!raffle) return <div className="container" style={{ textAlign: 'center', marginTop: '5rem' }}>Cargando...</div>;
 
     const isVideo = (url: string) => url?.match(/\.(mp4|webm|ogg)|video/i);
+
+    if (purchaseComplete && purchaseSummary) {
+        const myTicketsLink = `${window.location.origin}/#/mis-tickets?q=${purchaseSummary.phone.replace('+', '%2B')}`;
+        const whatsappMsg = `¡Hola! Aquí está mi link para ver mis tickets de la rifa *${raffle.title}*: ${myTicketsLink}`;
+
+        return (
+            <div className="container" style={{ maxWidth: '600px', textAlign: 'center', padding: '4rem 1rem' }}>
+                <div style={{ background: 'white', padding: '2rem', borderRadius: '1.5rem', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
+                    <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎉</div>
+                    <h1 style={{ color: '#1e293b', marginBottom: '0.5rem' }}>¡Gracias por Participar!</h1>
+                    <p style={{ color: '#64748b', fontSize: '1.1rem', marginBottom: '2rem' }}>
+                        {raffle.thank_you_message || 'Tus tickets han sido reservados exitosamente.'}
+                    </p>
+
+                    <div style={{ background: '#f0f9ff', padding: '1.5rem', borderRadius: '1rem', border: '1px solid #bae6fd', marginBottom: '2rem' }}>
+                        <p style={{ margin: '0 0 0.5rem 0', color: '#0369a1', fontWeight: 'bold' }}>Resumen de Compra</p>
+                        <hr style={{ borderColor: '#bae6fd', opacity: 0.5 }} />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', margin: '0.5rem 0', color: '#0c4a6e' }}>
+                            <span>Cantidad:</span>
+                            <strong>{purchaseSummary.ticketCount} Tickets</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', margin: '0.5rem 0', color: '#0c4a6e' }}>
+                            <span>Total:</span>
+                            <strong>{formatPrice(purchaseSummary.totalAmount)}</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', margin: '0.5rem 0', color: '#ea580c' }}>
+                            <span>Estado:</span>
+                            <strong>⏳ Pendiente de Activación</strong>
+                        </div>
+                    </div>
+
+                    <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '1rem' }}>
+                        Guarda este enlace para ver el estado de tus tickets:
+                    </p>
+
+                    <a
+                        href={`https://wa.me/${purchaseSummary.phone.replace(/\D/g, '')}?text=${encodeURIComponent(whatsappMsg)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn"
+                        style={{
+                            background: '#25D366',
+                            color: 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.5rem',
+                            textDecoration: 'none',
+                            marginBottom: '1rem'
+                        }}
+                    >
+                        📲 Enviarme Link a mi WhatsApp
+                    </a>
+
+                    <Link to="/" className="btn" style={{ background: '#f1f5f9', color: '#64748b', display: 'block', textAlign: 'center' }}>
+                        Volver al Inicio
+                    </Link>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="container" style={{ maxWidth: '1000px' }}>
