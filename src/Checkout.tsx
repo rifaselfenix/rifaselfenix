@@ -4,6 +4,19 @@ import { supabase } from './lib/supabase';
 import confetti from 'canvas-confetti';
 import { Ticket as TicketIcon, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 
+const COUNTRY_CODES = [
+    { code: '+58', country: 'VE' },
+    { code: '+57', country: 'CO' },
+    { code: '+1', country: 'US' },
+    { code: '+34', country: 'ES' },
+    { code: '+54', country: 'AR' },
+    { code: '+56', country: 'CL' },
+    { code: '+51', country: 'PE' },
+    { code: '+507', country: 'PA' },
+    { code: '+593', country: 'EC' },
+    { code: '+52', country: 'MX' }
+];
+
 export default function Checkout() {
     const { id } = useParams();
     const [raffle, setRaffle] = useState<any>(null);
@@ -22,6 +35,15 @@ export default function Checkout() {
 
     // --- User Form States ---
     const [userDetails, setUserDetails] = useState({ name: '', phone: '', email: '', idNumber: '' });
+
+    // Split Phone State
+    const [countryCode, setCountryCode] = useState('+58');
+    const [localPhone, setLocalPhone] = useState('');
+
+    useEffect(() => {
+        setUserDetails(prev => ({ ...prev, phone: `${countryCode} ${localPhone}` }));
+    }, [countryCode, localPhone]);
+
     const [showUserForm, setShowUserForm] = useState(false);
     const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
@@ -314,6 +336,7 @@ export default function Checkout() {
                 price_paid: raffle.price,
                 client_id_number: userDetails.idNumber,
                 client_email: userDetails.email,
+                client_phone: userDetails.phone,
                 payment_method: selectedPayment?.bank_name || 'Manual',
                 payment_receipt_url: receiptUrl,
                 status: 'reserved'
@@ -752,12 +775,24 @@ export default function Checkout() {
                                         onChange={e => setUserDetails({ ...userDetails, email: e.target.value })}
                                         style={inputStyle}
                                     />
-                                    <input
-                                        required placeholder="WhatsApp / Teléfono"
-                                        value={userDetails.phone}
-                                        onChange={e => setUserDetails({ ...userDetails, phone: e.target.value })}
-                                        style={inputStyle}
-                                    />
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <select
+                                            value={countryCode}
+                                            onChange={e => setCountryCode(e.target.value)}
+                                            style={{ ...inputStyle, width: '90px' }}
+                                        >
+                                            {COUNTRY_CODES.map(c => (
+                                                <option key={c.code} value={c.code}>{c.country} {c.code}</option>
+                                            ))}
+                                        </select>
+                                        <input
+                                            required placeholder="WhatsApp / Teléfono"
+                                            value={localPhone}
+                                            onChange={e => setLocalPhone(e.target.value)}
+                                            style={{ ...inputStyle, flex: 1 }}
+                                            type="tel"
+                                        />
+                                    </div>
                                     <input
                                         placeholder="Cédula / DNI (Opcional)"
                                         value={userDetails.idNumber}
