@@ -40,9 +40,15 @@ export default function Home() {
             const primary = raffle.manual_prices.find((p: any) => p.is_primary);
             const others = raffle.manual_prices.filter((p: any) => !p.is_primary);
 
+            const getFormat = (p: any) => {
+                const currency = currencies.find(c => c.code === p.currency_code);
+                const symbol = currency ? currency.symbol : p.currency_code;
+                return `${symbol} ${p.price.toLocaleString()}`;
+            };
+
             const parts = [];
-            if (primary) parts.push(`${primary.currency_code} ${primary.price.toLocaleString()}`);
-            others.forEach((p: any) => parts.push(`${p.currency_code} ${p.price.toLocaleString()}`));
+            if (primary) parts.push(getFormat(primary));
+            others.forEach((p: any) => parts.push(getFormat(p)));
 
             if (parts.length > 0) return parts.join(' / ');
         }

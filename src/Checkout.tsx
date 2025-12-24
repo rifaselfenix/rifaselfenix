@@ -113,9 +113,15 @@ export default function Checkout() {
             const primary = rafflePrices.find(p => p.is_primary);
             const others = rafflePrices.filter(p => !p.is_primary);
 
+            const getFormat = (p: any) => {
+                const currency = currencies.find(c => c.code === p.currency_code);
+                const symbol = currency ? currency.symbol : p.currency_code;
+                return `${symbol} ${(p.price * count).toLocaleString()}`;
+            };
+
             const parts = [];
-            if (primary) parts.push(`${primary.currency_code} ${(primary.price * count).toLocaleString()}`);
-            others.forEach(p => parts.push(`${p.currency_code} ${(p.price * count).toLocaleString()}`));
+            if (primary) parts.push(getFormat(primary));
+            others.forEach(p => parts.push(getFormat(p)));
 
             return parts.join(' / ');
         }
