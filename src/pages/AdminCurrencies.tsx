@@ -2,6 +2,26 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Trash2, Plus, Save, X } from 'lucide-react';
 
+const PRESET_CURRENCIES = [
+    { code: 'USD', name: 'Dólar Estadounidense', symbol: '$' },
+    { code: 'VES', name: 'Bolívar Venezolano', symbol: 'Bs.' },
+    { code: 'COP', name: 'Peso Colombiano', symbol: '$' },
+    { code: 'EUR', name: 'Euro', symbol: '€' },
+    { code: 'MXN', name: 'Peso Mexicano', symbol: '$' },
+    { code: 'ARS', name: 'Peso Argentino', symbol: '$' },
+    { code: 'CLP', name: 'Peso Chileno', symbol: '$' },
+    { code: 'PEN', name: 'Sol Peruano', symbol: 'S/' },
+    { code: 'BRL', name: 'Real Brasileño', symbol: 'R$' },
+    { code: 'DOP', name: 'Peso Dominicano', symbol: 'RD$' },
+    { code: 'GTQ', name: 'Quetzal Guatemalteco', symbol: 'Q' },
+    { code: 'CRC', name: 'Colón Costarricense', symbol: '₡' },
+    { code: 'HNL', name: 'Lempira Hondureño', symbol: 'L' },
+    { code: 'NIO', name: 'Córdoba Nicaragüense', symbol: 'C$' },
+    { code: 'PYG', name: 'Guaraní Paraguayo', symbol: '₲' },
+    { code: 'UYU', name: 'Peso Uruguayo', symbol: '$' },
+    { code: 'BOB', name: 'Boliviano', symbol: 'Bs.' }
+];
+
 export default function AdminCurrencies() {
     const [currencies, setCurrencies] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -61,6 +81,26 @@ export default function AdminCurrencies() {
             {showForm && (
                 <div style={{ background: 'white', padding: '1.5rem', borderRadius: '1rem', border: '1px solid #e2e8f0', marginBottom: '2rem' }}>
                     <h3 style={{ marginTop: 0 }}>Agregar Moneda</h3>
+
+                    <div style={{ marginBottom: '1rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.85rem', color: '#64748b', marginBottom: '0.5rem' }}>Seleccionar de la lista (Opcional)</label>
+                        <select
+                            onChange={(e) => {
+                                const selected = PRESET_CURRENCIES.find(c => c.code === e.target.value);
+                                if (selected) {
+                                    setNewCurrency({ ...newCurrency, ...selected, rate: newCurrency.rate || '' });
+                                }
+                            }}
+                            style={{ ...inputStyle, padding: '0.6rem' }}
+                        >
+                            <option value="">-- Seleccionar Moneda --</option>
+                            {PRESET_CURRENCIES.map(c => (
+                                <option key={c.code} value={c.code}>{c.name} ({c.code})</option>
+                            ))}
+                            <option value="custom">Otra / Personalizada</option>
+                        </select>
+                    </div>
+
                     <form onSubmit={handleAdd} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                         <div style={{ flex: 1, minWidth: '100px' }}>
                             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.3rem' }}>Código (ej: USD)</label>
