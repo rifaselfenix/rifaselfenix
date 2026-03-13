@@ -29,7 +29,6 @@ export default function Checkout() {
     const [rafflePrices, setRafflePrices] = useState<any[]>([]);
 
     const [buying, setBuying] = useState(false);
-    const [previewNumber, setPreviewNumber] = useState<number | null>(null);
     const [selectedPayment, setSelectedPayment] = useState<any>(null);
     const [currencies, setCurrencies] = useState<any[]>([]);
 
@@ -57,15 +56,9 @@ export default function Checkout() {
     const totalNumbers = 10000;
     const [searchTerm, setSearchTerm] = useState('');
 
-    // --- Machine States (Single) ---
+    // --- Generator State ---
     const [spinning, setSpinning] = useState(false);
-    const [slots, setSlots] = useState([0, 0, 0, 0]);
-
-    // --- Advanced Roulette State ---
-    const [showRouletteModal, setShowRouletteModal] = useState(false);
     const [rouletteCount, setRouletteCount] = useState(5);
-    const [rouletteResults, setRouletteResults] = useState<number[]>([]);
-    const [rouletteSpinning, setRouletteSpinning] = useState(false);
 
     useEffect(() => {
         if (!id) return;
@@ -160,57 +153,7 @@ export default function Checkout() {
         }).join(' / ');
     };
 
-    // --- Single Spin Logic ---
-    const spinMachine = () => {
-        if (spinning) return;
-        setSpinning(true);
-        setPreviewNumber(null);
-
-        const duration = 1500;
-        const interval = setInterval(() => {
-            setSlots([
-                Math.floor(Math.random() * 10),
-                Math.floor(Math.random() * 10),
-                Math.floor(Math.random() * 10),
-                Math.floor(Math.random() * 10)
-            ]);
-        }, 50);
-
-        setTimeout(() => {
-            clearInterval(interval);
-            let luckyNumber;
-            let attempts = 0;
-            do {
-                luckyNumber = Math.floor(Math.random() * 10000);
-                attempts++;
-            } while ((ticketStatuses[luckyNumber] || selectedNumbers.includes(luckyNumber)) && attempts < 1000);
-
-            if (attempts >= 1000) {
-                alert('¡Quedan pocos números disponibles!');
-                setSpinning(false);
-                return;
-            }
-
-            const digits = luckyNumber.toString().padStart(4, '0').split('').map(Number);
-            setSlots(digits);
-            setPreviewNumber(luckyNumber);
-            setSpinning(false);
-            confetti({ particleCount: 100, spread: 60, origin: { y: 0.6 }, colors: ['#fda4af', '#fcd34d', '#67e8f9'] });
-        }, duration);
-    };
-
-    const addPreviewToCart = () => {
-        if (previewNumber === null) return;
-        if (raffle?.allow_multi_ticket) {
-            setSelectedNumbers(prev => [...prev, previewNumber]);
-        } else {
-            setSelectedNumbers([previewNumber]);
-        }
-        setPreviewNumber(null);
-        confetti({ particleCount: 50, spread: 40, origin: { y: 0.7 } });
-    };
-
-    // --- Advanced Roulette Logic ---
+    // --- Smart Random Logic ---
     const getUniqueRandomAvailable = (exclude: number[], count: number) => {
         const found: number[] = [];
         let attempts = 0;
@@ -225,60 +168,40 @@ export default function Checkout() {
         return found;
     };
 
-    const spinRoulette = async () => {
-        if (rouletteSpinning) return;
-        setRouletteSpinning(true);
-        setRouletteResults([]); // Clear previous
+    const generateRandomTickets = (count: number) => {
+        if (spinning || (totalNumbers - soldTickets.length) === 0) return;
+        setSpinning(true);
 
-        // Animation effect
-        let iterations = 0;
-        const interval = setInterval(() => {
-            setRouletteResults(Array.from({ length: rouletteCount }, () => Math.floor(Math.random() * 10000)));
-            iterations++;
-            if (iterations > 12) clearInterval(interval);
-        }, 80);
+        // Fast visual pop
+        confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 }, colors: ['#f59e0b', '#10b981'] });
 
         setTimeout(() => {
-            clearInterval(interval);
-            const newNumbers = getUniqueRandomAvailable([], rouletteCount);
-            setRouletteResults(newNumbers);
-            setRouletteSpinning(false);
-            if (newNumbers.length < rouletteCount) alert('No hay suficientes tickets disponibles.');
-            confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
-        }, 1200);
-    };
+            const newNumbers = getUniqueRandomAvailable([], count);
+            if (newNumbers.length < count && newNumbers.length > 0) {
+                alert(`Solo pudimos encontrar ${newNumbers.length} tickets disponibles.`);
+            } else if (newNumbers.length === 0) {
+                alert('No hay tickets disponibles');
+                setSpinning(false);
+                return;
+            }
 
-    const reSpinSingle = (index: number) => {
-        const current = [...rouletteResults];
-        const exclude = [...current]; // Exclude existing results to avoid dupes in this batch
-        exclude.splice(index, 1); // Remove the one we are replacing from exclusions
+            if (raffle?.allow_multi_ticket) {
+                setSelectedNumbers(prev => {
+                    const newSet = new Set([...prev, ...newNumbers]);
+                    return Array.from(newSet);
+                });
+            } else {
+                setSelectedNumbers([newNumbers[0]]);
+            }
 
-        const [newNum] = getUniqueRandomAvailable(exclude, 1);
-        if (newNum !== undefined) {
-            current[index] = newNum;
-            setRouletteResults(current);
-        } else {
-            alert('No hay más tickets disponibles');
-        }
-    };
+            setSpinning(false);
 
-    const confirmRouletteSelection = () => {
-        if (raffle?.allow_multi_ticket) {
-            setSelectedNumbers(prev => {
-                const newSet = new Set([...prev, ...rouletteResults]);
-                return Array.from(newSet);
-            });
-        } else {
-            // Should not happen as button hidden if multi-ticket invalid, but safety:
-            setSelectedNumbers([rouletteResults[0]]);
-        }
-        setShowRouletteModal(false);
-        setRouletteResults([]);
+            // Auto-scroll to cart summary area if there's any
+            setTimeout(() => {
+                document.getElementById('cart-summary')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
 
-        // Auto-scroll to form after selection
-        setTimeout(() => {
-            document.getElementById('checkout-form')?.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
+        }, 150); // fast perceived response
     };
 
     // --- Grid Logic ---
@@ -377,7 +300,6 @@ export default function Checkout() {
             setSelectedNumbers([]);
             setShowUserForm(false);
             setReceiptFile(null);
-            setSlots([0, 0, 0, 0]);
             setSelectedPayment(null);
 
         } catch (error: any) {
@@ -534,46 +456,11 @@ export default function Checkout() {
                             </div>
 
                             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', width: '100%', justifyContent: 'center' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.5fr)', gap: '1rem', flex: 1 }}>
-                                    <button
-                                        onClick={spinMachine}
-                                        disabled={spinning || (totalNumbers - soldTickets.length) === 0}
-                                        style={{
-                                            flex: 1, padding: '1rem', borderRadius: '1rem', border: 'none',
-                                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white',
-                                            fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                                            boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.4)'
-                                        }}
-                                    >
-                                        <Zap size={20} />
-                                        {spinning ? 'Seleccionando...' : 'Al Azar'}
-                                    </button>
-
-                                    {/* Ráfaga Button */}
-                                    {raffle?.allow_multi_ticket && (
-                                        <button
-                                            onClick={() => setShowRouletteModal(true)}
-                                            disabled={spinning || (totalNumbers - soldTickets.length) === 0}
-                                            style={{
-                                                flex: 1.5, padding: '1rem', borderRadius: '1rem', border: 'none',
-                                                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: 'white',
-                                                fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                                                boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.4)'
-                                            }}
-                                        >
-                                            <Zap size={20} />
-                                            Varios Al Azar
-                                        </button>
-                                    )}
-                                </div>
-
                                 <div style={{ position: 'relative', flex: 1, minWidth: '100px' }}>
                                     <Search size={16} style={{ position: 'absolute', left: 8, top: 10, color: '#94a3b8' }} />
                                     <input
                                         type="text"
-                                        placeholder="Buscar..."
+                                        placeholder="Buscar ticket específico..."
                                         value={searchTerm}
                                         onChange={e => handleSearch(e.target.value)}
                                         style={{ padding: '0.5rem 0.5rem 0.5rem 2rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', width: '100%', boxSizing: 'border-box' }}
@@ -583,22 +470,42 @@ export default function Checkout() {
                         </div>
                     </div>
 
-                    {/* Inline Ráfaga (Roulette) */}
-                    {showRouletteModal && (
-                        <div style={{ marginBottom: '2rem', padding: '1.5rem', background: '#fffbeb', borderRadius: '1rem', border: '2px dashed #f59e0b', animation: 'fadeIn 0.3s' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                                <h3 style={{ margin: 0, color: '#b45309', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.3rem' }}>
-                                    ⚡ Ráfaga de Suerte
-                                </h3>
-                                <button onClick={() => setShowRouletteModal(false)} style={{ background: '#fef3c7', border: 'none', width: '30px', height: '30px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#b45309', fontWeight: 'bold' }}>✕</button>
+                    {/* Quick Random Selection Block */}
+                    <div style={{ background: '#fffbeb', padding: '1.5rem', borderRadius: '1rem', marginBottom: '2rem', border: '2px dashed #fcd34d', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                        <div>
+                            <h3 style={{ margin: '0 0 0.5rem 0', color: '#b45309', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem' }}>
+                                ⚡ Selección Rápida al Azar
+                            </h3>
+                            <p style={{ margin: 0, color: '#92400e', fontSize: '0.9rem' }}>Elige cuántos tickets deseas y los pre-seleccionaremos al instante.</p>
+                        </div>
+
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'center' }}>
+                            {/* Preset Buttons */}
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                {[1, 5, 10, 20, 30].map(qty => (
+                                    <button
+                                        key={qty}
+                                        onClick={() => setRouletteCount(qty)}
+                                        style={{
+                                            background: rouletteCount === qty ? '#fef3c7' : 'white',
+                                            color: rouletteCount === qty ? '#d97706' : '#64748b',
+                                            border: `2px solid ${rouletteCount === qty ? '#f59e0b' : '#cbd5e1'}`,
+                                            padding: '0.5rem 1rem',
+                                            borderRadius: '0.5rem',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s',
+                                            fontSize: '1rem'
+                                        }}
+                                    >
+                                        +{qty}
+                                    </button>
+                                ))}
                             </div>
 
-                            <p style={{ color: '#92400e', textAlign: 'center', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
-                                Selecciona cuántos tickets quieres y deja que el azar decida por ti.
-                            </p>
-
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', marginBottom: '2rem' }}>
-                                <button className="btn" onClick={() => setRouletteCount(Math.max(1, rouletteCount - 1))} style={{ background: '#fcd34d', color: '#78350f', padding: '0.5rem 1rem', fontWeight: 'bold' }}>-</button>
+                            {/* Custom Input */}
+                            <div style={{ display: 'flex', alignItems: 'center', background: 'white', borderRadius: '0.5rem', border: '2px solid #cbd5e1', overflow: 'hidden' }}>
+                                <button onClick={() => setRouletteCount(Math.max(1, rouletteCount - 1))} style={{ background: '#f1f5f9', border: 'none', padding: '0.5rem 1rem', fontWeight: 'bold', cursor: 'pointer', color: '#475569', fontSize: '1.2rem' }}>-</button>
                                 <input
                                     type="number"
                                     min="1"
@@ -608,91 +515,38 @@ export default function Checkout() {
                                         const val = parseInt(e.target.value);
                                         if (!isNaN(val)) setRouletteCount(Math.min(1000, Math.max(1, val)));
                                     }}
-                                    style={{
-                                        fontSize: '1.8rem',
-                                        fontWeight: 'bold',
-                                        width: '80px',
-                                        textAlign: 'center',
-                                        background: 'white',
-                                        border: '1px solid #f59e0b',
-                                        borderRadius: '0.5rem',
-                                        color: '#b45309',
-                                        padding: '0.2rem'
-                                    }}
+                                    style={{ width: '60px', textAlign: 'center', border: 'none', borderLeft: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', padding: '0.5rem', fontWeight: 'bold', color: '#334155', fontSize: '1.2rem' }}
                                 />
-                                <button className="btn" onClick={() => setRouletteCount(Math.min(1000, rouletteCount + 1))} style={{ background: '#fcd34d', color: '#78350f', padding: '0.5rem 1rem', fontWeight: 'bold' }}>+</button>
+                                <button onClick={() => setRouletteCount(Math.min(1000, rouletteCount + 1))} style={{ background: '#f1f5f9', border: 'none', padding: '0.5rem 1rem', fontWeight: 'bold', cursor: 'pointer', color: '#475569', fontSize: '1.2rem' }}>+</button>
                             </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                {rouletteResults.length === 0 ? (
-                                    <button
-                                        onClick={spinRoulette}
-                                        disabled={rouletteSpinning}
-                                        className="btn"
-                                        style={{ fontSize: '1.1rem', padding: '1rem 3rem', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: 'white', boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.4)' }}
-                                    >
-                                        {rouletteSpinning ? 'Girando...' : '🎰 GENERAR TICKETS'}
-                                    </button>
-                                ) : (
-                                    <div style={{ width: '100%' }}>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '0.5rem', marginBottom: '1.5rem' }}>
-                                            {rouletteResults.map((num, i) => {
-
-
-                                                return (
-                                                    <div key={i} style={{ background: 'white', borderRadius: '0.5rem', padding: '0.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', border: '1px solid #fcd34d' }}>
-                                                        <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#b45309' }}>{num.toString().padStart(4, '0')}</span>
-                                                        <button onClick={() => reSpinSingle(i)} style={{ marginTop: '0.3rem', background: 'transparent', border: 'none', color: '#d97706', cursor: 'pointer', fontSize: '0.7rem', textDecoration: 'underline' }}>
-                                                            Cambiar
-                                                        </button>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                                            <button onClick={() => setRouletteResults([])} style={{ background: 'white', border: '1px solid #f87171', color: '#ef4444', padding: '0.8rem 1.5rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 'bold' }}>Cancelar</button>
-                                            <button onClick={confirmRouletteSelection} style={{ background: '#10b981', color: 'white', padding: '0.8rem 2rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem', boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.4)' }}>
-                                                ✅ ¡Los quiero!
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                            {/* Generate Button */}
+                            <button
+                                onClick={() => generateRandomTickets(rouletteCount)}
+                                disabled={spinning || (totalNumbers - soldTickets.length) === 0}
+                                style={{
+                                    flex: 1,
+                                    minWidth: '200px',
+                                    padding: '0.8rem 1.5rem',
+                                    borderRadius: '0.5rem',
+                                    border: 'none',
+                                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                                    color: 'white',
+                                    fontWeight: 'bold',
+                                    fontSize: '1.1rem',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '0.5rem',
+                                    boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.4)'
+                                }}
+                            >
+                                <Zap size={20} />
+                                {spinning ? 'Seleccionando...' : `Seleccionar ${rouletteCount} Ticket${rouletteCount > 1 ? 's' : ''}`}
+                            </button>
                         </div>
-                    )}
-
-                    {/* Machine Preview (Single) */}
-                    {(spinning || previewNumber !== null) && (
-                        <div style={{ marginBottom: '2rem', padding: '1.5rem', background: '#eff6ff', borderRadius: '1rem', border: '2px dashed #93c5fd', display: 'flex', flexDirection: 'column', alignItems: 'center', animation: 'fadeIn 0.3s' }}>
-                            <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                                {slots.map((num, i) => (
-                                    <div key={i} style={{ width: '50px', height: '70px', background: '#1e293b', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '0.5rem', fontSize: '2rem', fontWeight: 'bold', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.2)' }}>
-                                        {num}
-                                    </div>
-                                ))}
-                            </div>
-
-                            {!spinning && previewNumber !== null && (
-                                <div style={{ display: 'flex', gap: '1rem', animation: 'scaleIn 0.2s' }}>
-                                    <button
-                                        onClick={addPreviewToCart}
-                                        className="btn"
-                                        style={{ background: '#10b981', color: 'white', fontSize: '1.1rem', padding: '0.8rem 1.5rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}
-                                    >
-                                        <TicketIcon size={20} /> AGREGAR #{previewNumber.toString().padStart(4, '0')}
-                                    </button>
-                                    <button
-                                        onClick={spinMachine}
-                                        className="btn"
-                                        style={{ background: '#fff', color: '#6366f1', border: '1px solid #6366f1', padding: '0.8rem 1.5rem' }}
-                                    >
-                                        Intentar otro
-                                    </button>
-                                </div>
-                            )}
-                            {spinning && <p style={{ color: '#6366f1', fontWeight: 'bold' }}>Buscando tu número de la suerte...</p>}
-                        </div>
-                    )}
+                    </div>
 
                     {/* Grid */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(48px, 1fr))', gap: '0.4rem' }}>
