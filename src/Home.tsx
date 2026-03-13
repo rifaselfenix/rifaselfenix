@@ -66,6 +66,39 @@ export default function Home() {
             <Navbar />
             <HeroCarousel />
 
+            {/* CONSULTAR MIS TICKETS BANNER */}
+            <div style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', padding: '1.5rem 1rem', display: 'flex', justifyContent: 'center' }}>
+                <Link to="/mis-tickets" style={{
+                    background: 'linear-gradient(to right, #be123c, #fb7185)',
+                    color: 'white',
+                    padding: '1rem 2.5rem',
+                    borderRadius: '999px',
+                    textDecoration: 'none',
+                    fontWeight: '900',
+                    fontSize: '1.2rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.8rem',
+                    boxShadow: '0 10px 25px -5px rgba(190, 18, 60, 0.5), 0 8px 10px -6px rgba(190, 18, 60, 0.5)',
+                    transform: 'translateY(0)',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    letterSpacing: '0.5px',
+                    border: '2px solid rgba(255,255,255,0.1)'
+                }}
+                    onMouseEnter={(e: any) => {
+                        e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
+                        e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(190, 18, 60, 0.6), 0 10px 10px -5px rgba(190, 18, 60, 0.4)';
+                    }}
+                    onMouseLeave={(e: any) => {
+                        e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                        e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(190, 18, 60, 0.5), 0 8px 10px -6px rgba(190, 18, 60, 0.5)';
+                    }}
+                >
+                    <Ticket size={24} />
+                    CONSULTAR MIS TICKETS
+                </Link>
+            </div>
+
             {/* RAFFLES SECTION */}
             <div id="rifas" className="container" style={{ padding: '6rem 1rem 4rem 1rem' }}>
                 <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
@@ -124,9 +157,6 @@ export default function Home() {
                                                     transition: 'width 1s ease-out'
                                                 }}></div>
                                             </div>
-                                            <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: '0.5rem', textAlign: 'right' }}>
-                                                {raffle.soldCount} tickets vendidos
-                                            </p>
                                         </div>
 
                                         <div style={{ marginTop: 'auto', background: '#f8fafc', margin: '0 -2rem -2rem -2rem', padding: '1.5rem 2rem', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

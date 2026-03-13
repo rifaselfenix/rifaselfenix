@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import confetti from 'canvas-confetti';
-import { Ticket as TicketIcon, ChevronLeft, ChevronRight, Search, Copy } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Zap, Copy, Ticket as TicketIcon } from 'lucide-react';
 
 const COUNTRY_CODES = [
     { code: '+58', country: 'VE' },
@@ -41,7 +41,7 @@ export default function Checkout() {
     const [localPhone, setLocalPhone] = useState('');
 
     useEffect(() => {
-        setUserDetails(prev => ({ ...prev, phone: `${countryCode} ${localPhone}` }));
+        setUserDetails(prev => ({ ...prev, phone: `${countryCode}${localPhone} ` }));
     }, [countryCode, localPhone]);
 
     const [showUserForm, setShowUserForm] = useState(false);
@@ -90,8 +90,8 @@ export default function Checkout() {
         };
         fetchTickets();
 
-        // 3. Fetch Payment Methods
-        supabase.from('payment_methods').select('*').eq('raffle_id', id)
+        // 3. Fetch Payment Methods (Global)
+        supabase.from('payment_methods').select('*')
             .then(({ data }) => setPaymentMethods(data || []));
 
         // 4. Fetch Currencies & Prices
@@ -108,7 +108,7 @@ export default function Checkout() {
             .channel(`tickets-raffle-${id}`)
             .on(
                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'tickets', filter: `raffle_id=eq.${id}` },
+                { event: '*', schema: 'public', table: 'tickets', filter: `raffle_id = eq.${id} ` },
                 (payload) => {
                     if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
                         const newTicket = payload.new as any;
@@ -142,7 +142,7 @@ export default function Checkout() {
             const getFormat = (p: any) => {
                 const currency = currencies.find(c => c.code === p.currency_code);
                 const symbol = currency ? currency.symbol : p.currency_code;
-                return `${symbol} ${(p.price * count).toLocaleString()}`;
+                return `${symbol} ${(p.price * count).toLocaleString()} `;
             };
 
             const parts = [];
@@ -327,17 +327,17 @@ export default function Checkout() {
 
             if (receiptFile) {
                 const fileExt = receiptFile.name.split('.').pop();
-                const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+                const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt} `;
                 let bucketName = 'images';
-                let { error: uploadError } = await supabase.storage.from(bucketName).upload(`receipts/${fileName}`, receiptFile);
+                let { error: uploadError } = await supabase.storage.from(bucketName).upload(`receipts / ${fileName} `, receiptFile);
 
                 if (uploadError) {
                     bucketName = 'public';
-                    const { error: publicError } = await supabase.storage.from(bucketName).upload(`receipts/${fileName}`, receiptFile);
+                    const { error: publicError } = await supabase.storage.from(bucketName).upload(`receipts / ${fileName} `, receiptFile);
                     if (publicError) throw publicError;
                 }
 
-                const { data } = supabase.storage.from(bucketName).getPublicUrl(`receipts/${fileName}`);
+                const { data } = supabase.storage.from(bucketName).getPublicUrl(`receipts / ${fileName} `);
                 receiptUrl = data.publicUrl;
             }
 
@@ -402,8 +402,8 @@ export default function Checkout() {
     const isVideo = (url: string) => url?.match(/\.(mp4|webm|ogg)|video/i);
 
     if (purchaseComplete && purchaseSummary) {
-        const myTicketsLink = `${window.location.origin}/#/mis-tickets?q=${purchaseSummary.phone.replace('+', '%2B')}`;
-        const whatsappMsg = `¡Hola! Aquí está mi link para ver mis tickets de la rifa *${raffle.title}*: ${myTicketsLink}`;
+        const myTicketsLink = `${window.location.origin} /#/mis - tickets ? q = ${purchaseSummary.phone.replace('+', '%2B')} `;
+        const whatsappMsg = `¡Hola! Aquí está mi link para ver mis tickets de la rifa * ${raffle.title}*: ${myTicketsLink} `;
 
         return (
             <div className="container" style={{ maxWidth: '600px', textAlign: 'center', padding: '4rem 1rem' }}>
@@ -452,7 +452,7 @@ export default function Checkout() {
                         }}
                     >
                         📲 Enviarme Link a mi WhatsApp
-                    </a>
+                    </a >
 
                     <button
                         onClick={() => {
@@ -477,8 +477,8 @@ export default function Checkout() {
                     <Link to="/" className="btn" style={{ background: '#f1f5f9', color: '#64748b', display: 'block', textAlign: 'center' }}>
                         Volver al Inicio
                     </Link>
-                </div>
-            </div>
+                </div >
+            </div >
         );
     }
 
@@ -534,46 +534,40 @@ export default function Checkout() {
                             </div>
 
                             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', width: '100%', justifyContent: 'center' }}>
-                                <button
-                                    onClick={spinMachine}
-                                    disabled={spinning}
-                                    className="btn"
-                                    style={{
-                                        background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-                                        color: 'white',
-                                        padding: '0.5rem 1rem',
-                                        display: 'flex',
-                                        gap: '0.3rem',
-                                        alignItems: 'center',
-                                        boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.4)',
-                                        fontSize: '0.9rem',
-                                        flex: 1
-                                    }}
-                                >
-                                    <span style={{ fontSize: '1rem' }}>{spinning ? '🎲' : '🎰'}</span>
-                                    {spinning ? '...' : (previewNumber !== null ? 'Girar' : 'Azar')}
-                                </button>
-
-                                {raffle?.allow_multi_ticket && (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.5fr)', gap: '1rem', flex: 1 }}>
                                     <button
-                                        onClick={() => setShowRouletteModal(true)}
-                                        className="btn"
+                                        onClick={spinMachine}
+                                        disabled={spinning || (totalNumbers - soldTickets.length) === 0}
                                         style={{
-                                            background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                                            color: 'white',
-                                            padding: '0.5rem 1rem',
-                                            display: 'flex',
-                                            gap: '0.3rem',
-                                            alignItems: 'center',
-                                            boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.4)',
-                                            fontSize: '0.9rem',
-                                            flex: 1
+                                            flex: 1, padding: '1rem', borderRadius: '1rem', border: 'none',
+                                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white',
+                                            fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                                            boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.4)'
                                         }}
                                     >
-                                        <span style={{ fontSize: '1rem' }}>⚡</span>
-                                        Ráfaga
+                                        <Zap size={20} />
+                                        {spinning ? 'Seleccionando...' : 'Al Azar'}
                                     </button>
-                                )}
+
+                                    {/* Ráfaga Button */}
+                                    {raffle?.allow_multi_ticket && (
+                                        <button
+                                            onClick={() => setShowRouletteModal(true)}
+                                            disabled={spinning || (totalNumbers - soldTickets.length) === 0}
+                                            style={{
+                                                flex: 1.5, padding: '1rem', borderRadius: '1rem', border: 'none',
+                                                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: 'white',
+                                                fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                                                boxShadow: '0 4px 6px -1px rgba(245, 158, 11, 0.4)'
+                                            }}
+                                        >
+                                            <Zap size={20} />
+                                            Varios Al Azar
+                                        </button>
+                                    )}
+                                </div>
 
                                 <div style={{ position: 'relative', flex: 1, minWidth: '100px' }}>
                                     <Search size={16} style={{ position: 'absolute', left: 8, top: 10, color: '#94a3b8' }} />
@@ -642,14 +636,18 @@ export default function Checkout() {
                                 ) : (
                                     <div style={{ width: '100%' }}>
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '0.5rem', marginBottom: '1.5rem' }}>
-                                            {rouletteResults.map((num, i) => (
-                                                <div key={i} style={{ background: 'white', borderRadius: '0.5rem', padding: '0.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', border: '1px solid #fcd34d' }}>
-                                                    <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#b45309' }}>{num.toString().padStart(4, '0')}</span>
-                                                    <button onClick={() => reSpinSingle(i)} style={{ marginTop: '0.3rem', background: 'transparent', border: 'none', color: '#d97706', cursor: 'pointer', fontSize: '0.7rem', textDecoration: 'underline' }}>
-                                                        Cambiar
-                                                    </button>
-                                                </div>
-                                            ))}
+                                            {rouletteResults.map((num, i) => {
+
+
+                                                return (
+                                                    <div key={i} style={{ background: 'white', borderRadius: '0.5rem', padding: '0.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', border: '1px solid #fcd34d' }}>
+                                                        <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#b45309' }}>{num.toString().padStart(4, '0')}</span>
+                                                        <button onClick={() => reSpinSingle(i)} style={{ marginTop: '0.3rem', background: 'transparent', border: 'none', color: '#d97706', cursor: 'pointer', fontSize: '0.7rem', textDecoration: 'underline' }}>
+                                                            Cambiar
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
                                             <button onClick={() => setRouletteResults([])} style={{ background: 'white', border: '1px solid #f87171', color: '#ef4444', padding: '0.8rem 1.5rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 'bold' }}>Cancelar</button>
@@ -707,15 +705,11 @@ export default function Checkout() {
                             let color = '#334155';
                             let cursor = 'pointer';
 
-                            if (status === 'paid') {
+                            // Treat reserved as sold for display
+                            if (status === 'paid' || status === 'reserved') {
                                 bg = '#10b981'; // Green
                                 color = 'white';
                                 borderColor = '#059669';
-                                cursor = 'not-allowed';
-                            } else if (status === 'reserved') {
-                                bg = '#94a3b8'; // Gray
-                                color = 'white';
-                                borderColor = '#64748b';
                                 cursor = 'not-allowed';
                             } else if (isSelected) {
                                 bg = '#fff1f2';
@@ -749,7 +743,6 @@ export default function Checkout() {
                     {/* Legend */}
                     <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1rem', fontSize: '0.9rem', color: '#64748b' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><div style={{ width: 12, height: 12, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '2px' }}></div> Disponible</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><div style={{ width: 12, height: 12, background: '#94a3b8', borderRadius: '2px' }}></div> Apartado</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><div style={{ width: 12, height: 12, background: '#10b981', borderRadius: '2px' }}></div> Vendido</div>
                     </div>
 

@@ -13,18 +13,22 @@ export default function Navbar() {
             borderBottom: '1px solid rgba(0,0,0,0.05)'
         }}>
             <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                {/* Logo */}
-                <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '1.8rem' }}>🔥</span>
-                    <span style={{ fontSize: '1.5rem', fontWeight: '800', background: 'linear-gradient(to right, #be123c, #fb7185)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        Rifas Fénix
+                {/* Logo & Version */}
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '1.8rem' }}>🔥</span>
+                        <span style={{ fontSize: '1.5rem', fontWeight: '800', background: 'linear-gradient(to right, #be123c, #fb7185)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                            Rifas Fénix
+                        </span>
+                    </Link>
+                    <span style={{ fontSize: '0.65rem', color: '#10b981', marginLeft: '2.5rem', marginTop: '-0.2rem', fontWeight: 'bold' }}>
+                        v2.0 (Actualizado)
                     </span>
-                </Link>
+                </div>
 
                 {/* Desktop Links (Visible > 768px via CSS) */}
                 <div className="desktop-links" style={{ gap: '2rem', alignItems: 'center' }}>
                     <Link to="/" style={linkStyle}>Inicio</Link>
-                    <Link to="/mis-tickets" style={linkStyle}>Mis Tickets</Link>
                     <a href="/#/admin" style={{ ...linkStyle, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <User size={18} /> Admin
                     </a>
@@ -49,7 +53,6 @@ export default function Navbar() {
                     boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
                 }}>
                     <Link to="/" onClick={() => setIsMobileMenuOpen(false)} style={mobileLinkStyle}>🏠 Inicio</Link>
-                    <Link to="/mis-tickets" onClick={() => setIsMobileMenuOpen(false)} style={mobileLinkStyle}>🎟️ Mis Tickets</Link>
                     <a href="/#/admin" onClick={() => setIsMobileMenuOpen(false)} style={mobileLinkStyle}>⚙️ Admin</a>
                 </div>
             )}

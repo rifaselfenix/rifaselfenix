@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import confetti from 'canvas-confetti';
-import { ArrowLeft, Phone, Edit2, CheckCircle, ExternalLink, Ticket, Trophy, Play, Download, Copy } from 'lucide-react';
+import { ArrowLeft, Phone, Edit2, CheckCircle, ExternalLink, Ticket, Trophy, Download, Copy, Play } from 'lucide-react';
 
 export default function AdminRaffleDetails() {
     const { id } = useParams();
@@ -12,17 +12,12 @@ export default function AdminRaffleDetails() {
 
     // Config States
     const [config, setConfig] = useState({ allow_multi_ticket: false });
-    const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
 
     // Manual Prices State
     const [currencies, setCurrencies] = useState<any[]>([]);
     const [prices, setPrices] = useState<any[]>([]);
-    const [newPrice, setNewPrice] = useState({ currency_code: 'USD', price: '' });
-
     // Form States
-    const [newMethod, setNewMethod] = useState({ bank_name: '', account_number: '', account_type: '', account_owner: '', image_url: '' });
-    const [showMethodForm, setShowMethodForm] = useState(false);
-    const [uploadingImage, setUploadingImage] = useState(false);
+    const [newPrice, setNewPrice] = useState({ currency_code: 'USD', price: '' });
 
     // Winner Roulette States
     const [showWinnerModal, setShowWinnerModal] = useState(false);
@@ -61,11 +56,7 @@ export default function AdminRaffleDetails() {
             .order('ticket_number', { ascending: true });
         setTickets(ticketsData || []);
 
-        // 3. Cargar Métodos de Pago
-        const { data: methods } = await supabase.from('payment_methods').select('*').eq('raffle_id', id);
-        setPaymentMethods(methods || []);
-
-        // 4. Cargar Monedas y Precios
+        // 3. Cargar Monedas y Precios
         const { data: currData } = await supabase.from('currencies').select('*').eq('is_active', true);
         setCurrencies(currData || []);
 
@@ -118,41 +109,6 @@ export default function AdminRaffleDetails() {
             alert('Error: ' + error.message);
             setConfig({ ...config, allow_multi_ticket: !config.allow_multi_ticket });
         }
-    };
-
-    const handleMethodImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!e.target.files || e.target.files.length === 0) return;
-        setUploadingImage(true);
-        const file = e.target.files[0];
-        try {
-            const fileExt = file.name.split('.').pop();
-            const fileName = `bank-${Date.now()}.${fileExt}`;
-            const filePath = `payment-methods/${fileName}`;
-            const { error: uploadError } = await supabase.storage.from('images').upload(filePath, file);
-            if (uploadError) throw uploadError;
-            const { data } = supabase.storage.from('images').getPublicUrl(filePath);
-            setNewMethod(prev => ({ ...prev, image_url: data.publicUrl }));
-        } catch (error: any) {
-            alert('Error subiendo logo: ' + error.message);
-        } finally {
-            setUploadingImage(false);
-        }
-    };
-
-    const addPaymentMethod = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const { data } = await supabase.from('payment_methods').insert([{ raffle_id: id, ...newMethod }]).select();
-        if (data) {
-            setPaymentMethods([...paymentMethods, data[0]]);
-            setShowMethodForm(false);
-            setNewMethod({ bank_name: '', account_number: '', account_type: '', account_owner: '', image_url: '' });
-        }
-    };
-
-    const deleteMethod = async (methodId: string) => {
-        if (!confirm('¿Eliminar método?')) return;
-        await supabase.from('payment_methods').delete().eq('id', methodId);
-        setPaymentMethods(paymentMethods.filter(m => m.id !== methodId));
     };
 
     const handleEditImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -446,39 +402,15 @@ Ver tickets aquí: ${link}
                 {/* Config Card */}
                 <div style={{ background: 'white', padding: '1.5rem', borderRadius: '1rem', border: '1px solid #e2e8f0' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                        <h3 style={{ margin: 0, color: '#334155' }}>⚙️ Config</h3>
+                        <h3 style={{ margin: 0, color: '#334155' }}>⚙️ Configuración Adicional</h3>
                         <button onClick={toggleMultiTicket} style={{ background: config.allow_multi_ticket ? '#10b981' : '#cbd5e1', color: 'white', border: 'none', padding: '0.3rem 0.8rem', borderRadius: '99px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}>
                             {config.allow_multi_ticket ? 'Venta Múltiple ON' : 'Venta Múltiple OFF'}
                         </button>
                     </div>
 
-                    <h4 style={{ margin: '0 0 0.5rem 0', color: '#475569', fontSize: '0.9rem' }}>Métodos de Pago</h4>
-                    <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        {paymentMethods.map(m => (
-                            <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem', background: '#f8fafc', borderRadius: '0.5rem' }}>
-                                <span style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>{m.bank_name}</span>
-                                <button onClick={() => deleteMethod(m.id)} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer' }}>✕</button>
-                            </div>
-                        ))}
-                        <button onClick={() => setShowMethodForm(!showMethodForm)} style={{ marginTop: '0.5rem', width: '100%', padding: '0.5rem', border: '1px dashed #cbd5e1', borderRadius: '0.5rem', color: '#2563eb', background: 'none', cursor: 'pointer' }}>+ Nuevo Método</button>
-                    </div>
-
-                    {showMethodForm && (
-                        <form onSubmit={addPaymentMethod} style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            <input placeholder="Banco" value={newMethod.bank_name} onChange={e => setNewMethod({ ...newMethod, bank_name: e.target.value })} style={inputStyle} required />
-                            <input placeholder="Nro Cuenta" value={newMethod.account_number} onChange={e => setNewMethod({ ...newMethod, account_number: e.target.value })} style={inputStyle} required />
-                            <input placeholder="Titular" value={newMethod.account_owner} onChange={e => setNewMethod({ ...newMethod, account_owner: e.target.value })} style={inputStyle} />
-
-                            <div style={{ padding: '0.5rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px dashed #cbd5e1' }}>
-                                <label style={{ display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.3rem' }}>Logo del Banco o QR</label>
-                                <input type="file" accept="image/*" onChange={handleMethodImageUpload} style={{ fontSize: '0.8rem', width: '100%' }} />
-                                {uploadingImage && <span style={{ fontSize: '0.8rem', color: '#2563eb' }}>Subiendo...</span>}
-                                {newMethod.image_url && <img src={newMethod.image_url} alt="Vista previa" style={{ marginTop: '0.5rem', height: '40px', borderRadius: '4px' }} />}
-                            </div>
-
-                            <button type="submit" className="btn" style={{ background: '#2563eb', color: 'white', padding: '0.5rem' }}>Guardar</button>
-                        </form>
-                    )}
+                    <p style={{ fontSize: '0.9rem', color: '#64748b' }}>
+                        La configuración de <strong>Métodos de Pago</strong> ahora es global. Puedes ajustarla desde la sección <Link to="/admin/currencies" style={{ color: '#2563eb' }}>Monedas y Pagos</Link>.
+                    </p>
 
                     <hr style={{ margin: '2rem 0', border: 0, borderTop: '1px solid #e2e8f0' }} />
 
@@ -615,8 +547,16 @@ Ver tickets aquí: ${link}
                                         ${group.totalAmount.toLocaleString()}
                                     </td>
                                     <td style={{ padding: '1rem', fontSize: '0.9rem', color: '#64748b' }}>
-                                        {group.created_at ? new Date(group.created_at).toLocaleDateString() : '-'}
-                                        <div style={{ fontSize: '0.75rem' }}>{group.created_at ? new Date(group.created_at).toLocaleTimeString() : ''}</div>
+                                        {group.created_at ? (
+                                            <>
+                                                <div style={{ fontWeight: 'bold', color: '#334155' }}>
+                                                    {new Date(group.created_at).toLocaleDateString()}
+                                                </div>
+                                                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                                                    {new Date(group.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </div>
+                                            </>
+                                        ) : '-'}
                                     </td>
                                     <td style={{ padding: '1rem' }}>
                                         {group.payment_receipt_url ? (
