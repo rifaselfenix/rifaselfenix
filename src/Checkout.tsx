@@ -42,7 +42,7 @@ export default function Checkout() {
     const [localPhone, setLocalPhone] = useState('');
 
     useEffect(() => {
-        setUserDetails(prev => ({ ...prev, phone: `${countryCode}${localPhone} ` }));
+        setUserDetails(prev => ({ ...prev, phone: `${countryCode}${localPhone}`.trim() }));
     }, [countryCode, localPhone]);
 
     const [showUserForm, setShowUserForm] = useState(false);
@@ -265,10 +265,10 @@ export default function Checkout() {
                 raffle_id: raffle.id,
                 ticket_number: num,
                 price_paid: raffle.price,
-                client_name: userDetails.name,
-                client_id_number: userDetails.idNumber,
-                client_email: userDetails.email,
-                client_phone: userDetails.phone,
+                client_name: userDetails.name.trim(),
+                client_id_number: userDetails.idNumber.trim(),
+                client_email: userDetails.email.trim(),
+                client_phone: userDetails.phone.trim(),
                 payment_method: selectedPayment?.bank_name || 'Manual',
                 payment_receipt_url: receiptUrl,
                 status: 'reserved'

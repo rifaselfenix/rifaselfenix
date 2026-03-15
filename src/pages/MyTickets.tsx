@@ -21,14 +21,18 @@ export default function MyTickets() {
     }, [location.search]);
 
     const performSearch = async (term: string) => {
+        const cleanTerm = term.trim();
+        if (!cleanTerm) return;
+
         setLoading(true);
         setTickets(null);
 
-        // Search by phone OR email
+        // Search by phone OR email OR id
+        // Using ilike with % for phone/id to handle country codes and the previous trailing space bug
         const { data, error } = await supabase
             .from('tickets')
             .select('*, raffles ( title, image_url )')
-            .or(`client_phone.eq.${term},client_email.eq.${term.toLowerCase()},client_id_number.eq.${term}`)
+            .or(`client_phone.ilike.%${cleanTerm}%,client_email.ilike.${cleanTerm},client_id_number.ilike.%${cleanTerm}%`)
             .order('created_at', { ascending: false });
 
         if (data) {
@@ -39,7 +43,7 @@ export default function MyTickets() {
                 const { data: simpleData } = await supabase
                     .from('tickets')
                     .select('*')
-                    .or(`client_phone.eq.${term},client_email.eq.${term.toLowerCase()},client_id_number.eq.${term}`)
+                    .or(`client_phone.ilike.%${cleanTerm}%,client_email.ilike.${cleanTerm},client_id_number.ilike.%${cleanTerm}%`)
                     .order('created_at', { ascending: false });
                 setTickets(simpleData || []);
             }
