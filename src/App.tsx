@@ -7,6 +7,7 @@ import AdminContent from './pages/AdminContent';
 import AdminRaffles from './pages/AdminRaffles';
 import AdminRaffleDetails from './pages/AdminRaffleDetails';
 import AdminCurrencies from './pages/AdminCurrencies';
+import AdminClients from './pages/AdminClients';
 import Login from './pages/Login';
 
 import Home from './Home';
@@ -28,6 +29,7 @@ function App() {
           <Route index element={<AdminDashboard />} />
           <Route path="raffles" element={<AdminRaffles />} />
           <Route path="raffles/:id" element={<AdminRaffleDetails />} />
+          <Route path="clients" element={<AdminClients />} />
           <Route path="content" element={<AdminContent />} />
           <Route path="currencies" element={<AdminCurrencies />} />
         </Route>

@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Ticket, LogOut, Image, Coins } from 'lucide-react';
+import { LayoutDashboard, Ticket, LogOut, Image, Coins, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
@@ -60,6 +60,7 @@ export default function AdminLayout() {
                     <NavItem to="/admin" icon={<LayoutDashboard size={20} />} label="Dashboard" active={isActive('/admin')} />
                     <NavItem to="/admin/content" icon={<Image size={20} />} label="Multimedia" active={isActive('/admin/content')} />
                     <NavItem to="/admin/raffles" icon={<Ticket size={20} />} label="Mis Rifas" active={isActive('/admin/raffles')} />
+                    <NavItem to="/admin/clients" icon={<Users size={20} />} label="Clientes" active={isActive('/admin/clients')} />
                     <NavItem to="/admin/currencies" icon={<Coins size={20} />} label="Monedas" active={isActive('/admin/currencies')} />
                 </nav>
 
@@ -103,6 +104,10 @@ export default function AdminLayout() {
                 <Link to="/admin/raffles" className={isActive('/admin/raffles') ? 'active' : ''}>
                     <Ticket size={24} />
                     <span>Rifas</span>
+                </Link>
+                <Link to="/admin/clients" className={isActive('/admin/clients') ? 'active' : ''}>
+                    <Users size={24} />
+                    <span>Clientes</span>
                 </Link>
                 <Link to="/admin/currencies" className={isActive('/admin/currencies') ? 'active' : ''}>
                     <Coins size={24} />
