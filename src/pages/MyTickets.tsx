@@ -58,14 +58,14 @@ export default function MyTickets() {
             <div className="container" style={{ minHeight: '80vh', padding: '4rem 1rem' }}>
                 <h1 style={{ textAlign: 'center', marginBottom: '1rem', color: '#1e293b' }}>🎫 Mis Tickets</h1>
                 <p style={{ textAlign: 'center', color: '#64748b', marginBottom: '3rem' }}>
-                    Consulta tus números ingresando tu teléfono o correo electrónico.
+                    Consulta tus números ingresando tu cédula, teléfono o correo electrónico.
                 </p>
 
                 {/* Search Form */}
                 <form onSubmit={handleSearch} style={{ maxWidth: '500px', margin: '0 auto 4rem auto', display: 'flex', gap: '1rem' }}>
                     <input
                         type="text"
-                        placeholder="Cédula, Correo o Celular..."
+                        placeholder="Cédula, Teléfono o Correo..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                         style={{ flex: 1, padding: '1rem', borderRadius: '0.8rem', border: '1px solid #cbd5e1', fontSize: '1.1rem' }}
