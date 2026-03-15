@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 export default function AdminRaffles() {
     const [raffles, setRaffles] = useState<any[]>([]);
     const [showForm, setShowForm] = useState(false);
-    const [formData, setFormData] = useState({ title: '', price: '', description: '', image_url: '', currency: 'USD', thank_you_message: '' });
+    const [formData, setFormData] = useState({ title: '', price: '', description: '', image_url: '', currency: 'USD', thank_you_message: '', status: 'on_sale' });
     const [uploading, setUploading] = useState(false);
 
     const [currencies, setCurrencies] = useState<any[]>([]);
@@ -64,13 +64,13 @@ export default function AdminRaffles() {
             price: parseFloat(formData.price),
             description: formData.description,
             image_url: formData.image_url,
-            status: 'on_sale',
+            status: formData.status || 'on_sale',
             thank_you_message: formData.thank_you_message || '¡Gracias por participar! Tus tickets están reservados. Te notificaremos cuando tu pago sea verificado.'
         }]);
 
         if (!error) {
             setShowForm(false);
-            setFormData({ title: '', price: '', description: '', image_url: '', currency: 'USD', thank_you_message: '' });
+            setFormData({ title: '', price: '', description: '', image_url: '', currency: 'USD', thank_you_message: '', status: 'on_sale' });
             fetchRaffles();
         } else {
             alert('Error creando rifa: ' + error.message);
@@ -209,6 +209,17 @@ export default function AdminRaffles() {
                             </span>
                             <span style={{ marginLeft: '1rem', color: '#94a3b8', fontSize: '0.9rem' }}>
                                 {new Date(raffle.created_at).toLocaleDateString()}
+                            </span>
+                            <span style={{
+                                marginLeft: '1rem',
+                                padding: '0.2rem 0.6rem',
+                                borderRadius: '99px',
+                                fontSize: '0.75rem',
+                                fontWeight: 'bold',
+                                background: raffle.status === 'on_sale' ? '#dcfce7' : '#f1f5f9',
+                                color: raffle.status === 'on_sale' ? '#166534' : '#64748b'
+                            }}>
+                                {raffle.status === 'on_sale' ? 'ACTIVA' : 'CERRADA'}
                             </span>
                         </div>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>

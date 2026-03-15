@@ -28,7 +28,7 @@ export default function MyTickets() {
         const { data, error } = await supabase
             .from('tickets')
             .select('*, raffles ( title, image_url )')
-            .or(`client_phone.eq.${term},client_email.eq.${term.toLowerCase()}`)
+            .or(`client_phone.eq.${term},client_email.eq.${term.toLowerCase()},client_id_number.eq.${term}`)
             .order('created_at', { ascending: false });
 
         if (data) {
@@ -39,7 +39,7 @@ export default function MyTickets() {
                 const { data: simpleData } = await supabase
                     .from('tickets')
                     .select('*')
-                    .or(`client_phone.eq.${term},client_email.eq.${term.toLowerCase()}`)
+                    .or(`client_phone.eq.${term},client_email.eq.${term.toLowerCase()},client_id_number.eq.${term}`)
                     .order('created_at', { ascending: false });
                 setTickets(simpleData || []);
             }
@@ -65,7 +65,7 @@ export default function MyTickets() {
                 <form onSubmit={handleSearch} style={{ maxWidth: '500px', margin: '0 auto 4rem auto', display: 'flex', gap: '1rem' }}>
                     <input
                         type="text"
-                        placeholder="Correo o Celular..."
+                        placeholder="Cédula, Correo o Celular..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                         style={{ flex: 1, padding: '1rem', borderRadius: '0.8rem', border: '1px solid #cbd5e1', fontSize: '1.1rem' }}

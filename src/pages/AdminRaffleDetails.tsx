@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { sendTicketEmail } from '../lib/email';
 import confetti from 'canvas-confetti';
 import { ArrowLeft, Phone, Edit2, CheckCircle, ExternalLink, Ticket, Trophy, Download, Copy, Play, Search, Trash2 } from 'lucide-react';
 
@@ -224,16 +225,17 @@ export default function AdminRaffleDetails() {
 
     const getMessage = (group: any) => {
         if (!raffle) return '';
-        const ticketNumbers = group.tickets.map((t: any) => t.ticket_number).join(', #');
+        const ticketNumbers = group.tickets.map((t: any) => t.ticket_number.toString().padStart(4, '0')).join(', #');
         const link = group.client_phone ? `${window.location.origin}/#/mis-tickets?q=${group.client_phone.replace('+', '%2B')}` : '';
 
-        return `Hola ${group.client_name}, pago verificado ✅.
-Tus tickets: *#${ticketNumbers}*
-Para la rifa: *${raffle.title}*
+        return `Hola ${group.client_name}, ¡pago verificado con éxito! ✅.
 
-Ver tickets aquí: ${link}
+🎟️ Tus tickets: *#${ticketNumbers}*
+Rifa: *${raffle.title}*
 
-¡Mucha suerte! 🍀`;
+Puedes ver y descargar tus tickets aquí: ${link}
+
+¡Muchas gracias por participar y mucha suerte! 🍀`;
     };
 
     const handleCopyMessage = (group: any) => {
@@ -332,17 +334,20 @@ Ver tickets aquí: ${link}
 
             if (group.client_phone) {
                 const phone = group.client_phone.replace(/\D/g, '');
-                const ticketNumbers = group.tickets.map((t: any) => t.ticket_number).join(', #');
-                const link = `${window.location.origin}/#/mis-tickets?q=${group.client_phone.replace('+', '%2B')}`; // Encode +
-
-                const message = `Hola ${group.client_name}, pago verificado ✅.
-Tus tickets: *#${ticketNumbers}*
-Para la rifa: *${raffle.title}*
-
-Ver tickets aquí: ${link}
-
-¡Mucha suerte! 🍀`;
+                const message = getMessage(group);
                 window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+            }
+
+            // Send Email notification (Mock/Architecture)
+            if (group.tickets[0]?.client_email) {
+                const ticketLink = `${window.location.origin}/#/mis-tickets?q=${group.client_phone.replace('+', '%2B')}`;
+                await sendTicketEmail(
+                    group.tickets[0].client_email,
+                    group.client_name,
+                    raffle.title,
+                    group.tickets.map((t: any) => t.ticket_number.toString().padStart(4, '0')),
+                    ticketLink
+                );
             }
         }
     };
@@ -374,6 +379,30 @@ Ver tickets aquí: ${link}
                 >
                     <Trophy size={18} /> Sortear Ganador
                 </button>
+                {raffle.status !== 'closed' && (
+                    <button
+                        onClick={async () => {
+                            if (confirm('¿Estás seguro de CERRAR esta rifa? Ya no aparecerá en la página principal.')) {
+                                const { error } = await supabase.from('raffles').update({ status: 'closed' }).eq('id', id);
+                                if (!error) {
+                                    setRaffle({ ...raffle, status: 'closed' });
+                                    alert('Rifa cerrada exitosamente.');
+                                }
+                            }
+                        }}
+                        style={{
+                            background: '#f1f5f9',
+                            color: '#64748b',
+                            border: '1px solid #cbd5e1',
+                            padding: '0.6rem 1.2rem',
+                            borderRadius: '0.5rem',
+                            cursor: 'pointer',
+                            fontWeight: 'bold'
+                        }}
+                    >
+                        ⛔ Cerrar Rifa
+                    </button>
+                )}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
@@ -644,11 +673,16 @@ Ver tickets aquí: ${link}
                                     </td>
                                     <td style={{ padding: '1rem' }}>
                                         {group.payment_receipt_url ? (
-                                            <a href={group.payment_receipt_url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontSize: '0.9rem', fontWeight: 'bold', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                                                <ExternalLink size={14} /> Ver Recibo
-                                            </a>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                                                <a href={group.payment_receipt_url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontSize: '0.9rem', fontWeight: 'bold', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                                    <ExternalLink size={14} /> Ver Recibo
+                                                </a>
+                                                <span style={{ fontSize: '0.7rem', color: '#94a3b8', wordBreak: 'break-all', maxWidth: '120px' }}>
+                                                    {group.payment_receipt_url.split('/').pop()}
+                                                </span>
+                                            </div>
                                         ) : (
-                                            <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontStyle: 'italic' }}>Pendiente</span>
+                                            <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontStyle: 'italic' }}>Sin Recibo</span>
                                         )}
                                     </td>
                                     <td style={{ padding: '1rem', textAlign: 'right' }}>

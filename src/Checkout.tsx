@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from './lib/supabase';
+import { sendTicketEmail } from './lib/email';
 import confetti from 'canvas-confetti';
 import { ChevronLeft, ChevronRight, Search, Zap, Copy, Ticket as TicketIcon } from 'lucide-react';
 
@@ -287,6 +288,16 @@ export default function Checkout() {
             });
             setPurchaseComplete(true);
 
+            // Send Email notification (Mock/Architecture)
+            const ticketLink = `${window.location.origin}/#/mis-tickets?q=${userDetails.phone.replace('+', '%2B')}`;
+            await sendTicketEmail(
+                userDetails.email,
+                userDetails.name,
+                raffle.title,
+                selectedNumbers.map(n => n.toString().padStart(4, '0')),
+                ticketLink
+            );
+
             // Optimistic update
             const newStatuses = { ...ticketStatuses };
             selectedNumbers.forEach(n => newStatuses[n] = 'reserved');
@@ -427,8 +438,24 @@ export default function Checkout() {
                         </div>
                     )}
                     <div style={{ width: '100%', textAlign: 'center' }}>
-                        <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>{raffle.title}</h1>
-                        <p style={{ color: '#94a3b8', fontSize: '1.2rem', marginBottom: '1.5rem' }}>{raffle.description}</p>
+                        <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>{raffle.title}</h1>
+
+                        <div style={{
+                            background: '#fff',
+                            padding: '1.5rem',
+                            borderRadius: '1rem',
+                            boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
+                            marginBottom: '2rem',
+                            textAlign: 'center',
+                            maxWidth: '700px',
+                            margin: '0 auto 2rem auto',
+                            color: '#475569',
+                            whiteSpace: 'pre-wrap',
+                            lineHeight: '1.6',
+                            fontSize: '1.1rem'
+                        }}>
+                            {raffle.description}
+                        </div>
 
                         {/* Progress Bar */}
                         <div style={{ maxWidth: '600px', margin: '0 auto', background: '#f1f5f9', borderRadius: '999px', height: '24px', position: 'relative', overflow: 'hidden', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)' }}>
