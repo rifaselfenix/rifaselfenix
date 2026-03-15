@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import confetti from 'canvas-confetti';
-import { ArrowLeft, Phone, Edit2, CheckCircle, ExternalLink, Ticket, Trophy, Download, Copy, Play } from 'lucide-react';
+import { ArrowLeft, Phone, Edit2, CheckCircle, ExternalLink, Ticket, Trophy, Download, Copy, Play, Search, Trash2 } from 'lucide-react';
 
 export default function AdminRaffleDetails() {
     const { id } = useParams();
     const [raffle, setRaffle] = useState<any>(null);
     const [tickets, setTickets] = useState<any[]>([]);
     const [ticketTab, setTicketTab] = useState<'pending' | 'paid'>('pending');
+    const [clientSearch, setClientSearch] = useState('');
 
     // Config States
     const [config, setConfig] = useState({ allow_multi_ticket: false });
@@ -242,19 +243,47 @@ Ver tickets aquí: ${link}
         });
     };
 
-    // Group Tickets by Client (Name + Phone) to Handle Multi-Ticket Orders
-    const groupedTickets = tickets.reduce((acc: any[], ticket) => {
-        // Filter by current tab status
-        if (ticketTab === 'pending' && ticket.status !== 'reserved') return acc;
-        if (ticketTab === 'paid' && ticket.status !== 'paid') return acc;
+    const rejectGroup = async (group: any) => {
+        if (!confirm(`¿Estás seguro de RECHAZAR y ELIMINAR la orden de ${group.client_name}? Esto liberará los tickets #${group.tickets.map((t: any) => t.ticket_number).join(', #')}.`)) return;
 
+        const ticketIds = group.tickets.map((t: any) => t.id);
+        const { error } = await supabase
+            .from('tickets')
+            .delete()
+            .in('id', ticketIds);
+
+        if (error) {
+            alert('Error al rechazar: ' + error.message);
+        } else {
+            setTickets(tickets.filter(t => !ticketIds.includes(t.id)));
+            alert('✅ Orden rechazada y tickets liberados.');
+        }
+    };
+
+    // Group Tickets by Client (Name + Phone) to Handle Multi-Ticket Orders
+    const groupedTickets = tickets.filter(ticket => {
+        // Filter by current tab status
+        if (ticketTab === 'pending' && ticket.status !== 'reserved') return false;
+        if (ticketTab === 'paid' && ticket.status !== 'paid') return false;
+
+        // Search filter
+        if (clientSearch) {
+            const search = clientSearch.toLowerCase();
+            const nameMatch = (ticket.client_name || '').toLowerCase().includes(search);
+            const phoneMatch = (ticket.client_phone || '').includes(search);
+            const ticketMatch = ticket.ticket_number.toString().includes(search);
+            if (!nameMatch && !phoneMatch && !ticketMatch) return false;
+        }
+
+        return true;
+    }).reduce((acc: any[], ticket) => {
         const key = `${ticket.client_phone}-${ticket.client_name}`;
         const existing = acc.find((g: any) => g.key === key);
 
         if (existing) {
             existing.tickets.push(ticket);
             existing.totalAmount += (ticket.price_paid || 0);
-            if (!existing.payment_receipt_url && ticket.payment_receipt_url) existing.payment_receipt_url = ticket.payment_receipt_url; // Use last receipt found
+            if (!existing.payment_receipt_url && ticket.payment_receipt_url) existing.payment_receipt_url = ticket.payment_receipt_url;
         } else {
             acc.push({
                 key,
@@ -263,6 +292,7 @@ Ver tickets aquí: ${link}
                 client_id_number: ticket.client_id_number,
                 created_at: ticket.created_at,
                 payment_receipt_url: ticket.payment_receipt_url,
+                payment_method: ticket.payment_method,
                 tickets: [ticket],
                 totalAmount: ticket.price_paid || 0,
                 status: ticket.status
@@ -270,6 +300,16 @@ Ver tickets aquí: ${link}
         }
         return acc;
     }, []);
+
+    // Calculate Financial Summary for this raffle
+    const raffleStats = tickets.filter(t => t.status === 'paid').reduce((acc: any, t) => {
+        const method = t.payment_method || 'Manual';
+        if (!acc.methods[method]) acc.methods[method] = { count: 0, total: 0 };
+        acc.methods[method].count += 1;
+        acc.methods[method].total += (t.price_paid || 0);
+        acc.totalRevenue += (t.price_paid || 0);
+        return acc;
+    }, { totalRevenue: 0, methods: {} });
 
     const verifyGroup = async (group: any) => {
         if (!confirm(`¿Verificar pago de ${group.client_name} por ${group.tickets.length} tickets?`)) return;
@@ -457,6 +497,31 @@ Ver tickets aquí: ${link}
                 </div>
             </div>
 
+            {/* Financial Summary Breakdown (Cierre) */}
+            <div style={{ background: 'white', padding: '1.5rem', borderRadius: '1rem', border: '1px solid #e2e8f0', marginTop: '2rem' }}>
+                <h3 style={{ margin: '0 0 1rem 0', color: '#1e293b', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    💰 Resumen de Venta por Método (Cierre)
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+                    {Object.entries(raffleStats.methods).map(([method, data]: [string, any]) => (
+                        <div key={method} style={{ background: '#f8fafc', padding: '1rem', borderRadius: '0.8rem', border: '1px solid #f1f5f9' }}>
+                            <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold' }}>{method}</span>
+                            <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#0f172a', marginTop: '0.2rem' }}>
+                                ${data.total.toLocaleString()}
+                            </div>
+                            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{data.count} ventas</span>
+                        </div>
+                    ))}
+                    {Object.keys(raffleStats.methods).length === 0 && (
+                        <p style={{ color: '#94a3b8', fontSize: '0.9rem', fontStyle: 'italic' }}>No hay ventas confirmadas aún.</p>
+                    )}
+                </div>
+                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 'bold', color: '#64748b' }}>TOTAL RECAUDADO:</span>
+                    <span style={{ fontSize: '1.5rem', fontWeight: '900', color: '#059669' }}>${raffleStats.totalRevenue.toLocaleString()}</span>
+                </div>
+            </div>
+
             {/* TABS DE GESTIÓN */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2rem' }}>
                 <h3 style={{ color: '#334155', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
@@ -477,29 +542,42 @@ Ver tickets aquí: ${link}
                 </button>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', background: '#f1f5f9', padding: '0.3rem', borderRadius: '0.8rem', width: 'fit-content' }}>
-                <button
-                    onClick={() => setTicketTab('pending')}
-                    style={{
-                        padding: '0.6rem 1.2rem', borderRadius: '0.6rem', border: 'none', cursor: 'pointer', fontWeight: 'bold',
-                        background: ticketTab === 'pending' ? 'white' : 'transparent',
-                        color: ticketTab === 'pending' ? '#d97706' : '#94a3b8',
-                        boxShadow: ticketTab === 'pending' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-                    }}
-                >
-                    🟡 Por Revisar ({tickets.filter(t => t.status === 'reserved').length})
-                </button>
-                <button
-                    onClick={() => setTicketTab('paid')}
-                    style={{
-                        padding: '0.6rem 1.2rem', borderRadius: '0.6rem', border: 'none', cursor: 'pointer', fontWeight: 'bold',
-                        background: ticketTab === 'paid' ? 'white' : 'transparent',
-                        color: ticketTab === 'paid' ? '#059669' : '#94a3b8',
-                        boxShadow: ticketTab === 'paid' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-                    }}
-                >
-                    🟢 Aprobados / Pagados ({tickets.filter(t => t.status === 'paid').length})
-                </button>
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', background: '#f1f5f9', padding: '0.3rem', borderRadius: '0.8rem' }}>
+                    <button
+                        onClick={() => setTicketTab('pending')}
+                        style={{
+                            padding: '0.6rem 1.2rem', borderRadius: '0.6rem', border: 'none', cursor: 'pointer', fontWeight: 'bold',
+                            background: ticketTab === 'pending' ? 'white' : 'transparent',
+                            color: ticketTab === 'pending' ? '#d97706' : '#94a3b8',
+                            boxShadow: ticketTab === 'pending' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                        }}
+                    >
+                        🟡 Por Revisar ({tickets.filter(t => t.status === 'reserved').length})
+                    </button>
+                    <button
+                        onClick={() => setTicketTab('paid')}
+                        style={{
+                            padding: '0.6rem 1.2rem', borderRadius: '0.6rem', border: 'none', cursor: 'pointer', fontWeight: 'bold',
+                            background: ticketTab === 'paid' ? 'white' : 'transparent',
+                            color: ticketTab === 'paid' ? '#059669' : '#94a3b8',
+                            boxShadow: ticketTab === 'paid' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                        }}
+                    >
+                        🟢 Aprobados ({tickets.filter(t => t.status === 'paid').length})
+                    </button>
+                </div>
+
+                <div style={{ position: 'relative', flex: 1, minWidth: '250px' }}>
+                    <Search size={18} style={{ position: 'absolute', left: 12, top: 12, color: '#94a3b8' }} />
+                    <input
+                        type="text"
+                        placeholder="Buscar por cliente, teléfono o ticket..."
+                        value={clientSearch}
+                        onChange={(e) => setClientSearch(e.target.value)}
+                        style={{ ...inputStyle, padding: '0.6rem 0.6rem 0.6rem 2.8rem', borderRadius: '99px' }}
+                    />
+                </div>
             </div>
 
             {/* GROUPED TABLE */}
@@ -515,6 +593,7 @@ Ver tickets aquí: ${link}
                             <tr>
                                 <th style={{ padding: '1rem' }}>Cliente</th>
                                 <th style={{ padding: '1rem' }}>Tickets Seleccionados</th>
+                                <th style={{ padding: '1rem' }}>Método</th>
                                 <th style={{ padding: '1rem' }}>Total a Pagar</th>
                                 <th style={{ padding: '1rem' }}>Fecha</th>
                                 <th style={{ padding: '1rem' }}>Comprobante</th>
@@ -543,6 +622,11 @@ Ver tickets aquí: ${link}
                                             {group.tickets.length} tickets
                                         </div>
                                     </td>
+                                    <td style={{ padding: '1rem' }}>
+                                        <span style={{ fontSize: '0.8rem', background: '#f1f5f9', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 'bold', color: '#475569' }}>
+                                            {group.payment_method || 'Manual'}
+                                        </span>
+                                    </td>
                                     <td style={{ padding: '1rem', fontWeight: 'bold', color: '#059669' }}>
                                         ${group.totalAmount.toLocaleString()}
                                     </td>
@@ -569,27 +653,39 @@ Ver tickets aquí: ${link}
                                     </td>
                                     <td style={{ padding: '1rem', textAlign: 'right' }}>
                                         {ticketTab === 'pending' ? (
-                                            <button
-                                                onClick={() => verifyGroup(group)}
-                                                style={{ background: '#10b981', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem', float: 'right' }}
-                                            >
-                                                <CheckCircle size={16} /> Aprobar Todo
-                                            </button>
+                                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                                <button
+                                                    onClick={() => rejectGroup(group)}
+                                                    style={{ background: '#fee2e2', color: '#ef4444', border: 'none', padding: '0.5rem', borderRadius: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                    title="Rechazar/Eliminar"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                                <button
+                                                    onClick={() => verifyGroup(group)}
+                                                    style={{ background: '#10b981', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <CheckCircle size={16} /> Aprobar Todo
+                                                </button>
+                                            </div>
                                         ) : (
                                             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                                                 <button
+                                                    onClick={() => rejectGroup(group)}
+                                                    title="Eliminar Registro"
+                                                    style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '0.5rem' }}>
+                                                    <Trash2 size={16} />
+                                                </button>
+                                                <button
                                                     onClick={() => handleCopyMessage(group)}
                                                     title="Copiar Mensaje"
-                                                    style={{ background: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1', padding: '0.5rem', borderRadius: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                                                >
+                                                    style={{ background: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1', padding: '0.5rem', borderRadius: '0.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                                                     <Copy size={16} />
                                                 </button>
                                                 <a
                                                     href={`https://wa.me/${group.client_phone?.replace(/\D/g, '')}?text=${encodeURIComponent(getMessage(group))}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    style={{ background: '#dcfce7', color: '#166534', padding: '0.5rem 1rem', borderRadius: '0.5rem', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
-                                                >
+                                                    style={{ background: '#dcfce7', color: '#166534', padding: '0.5rem 1rem', borderRadius: '0.5rem', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
                                                     <Phone size={16} /> Contactar
                                                 </a>
                                             </div>
