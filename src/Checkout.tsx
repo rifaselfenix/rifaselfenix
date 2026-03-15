@@ -25,6 +25,7 @@ export default function Checkout() {
 
     // Multi-ticket State
     const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
+    const [randomNumbers, setRandomNumbers] = useState<number[]>([]); // Track which numbers were selected via Rafaga
     const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
     const [rafflePrices, setRafflePrices] = useState<any[]>([]);
 
@@ -185,14 +186,11 @@ export default function Checkout() {
                 return;
             }
 
-            if (raffle?.allow_multi_ticket) {
-                setSelectedNumbers(prev => {
-                    const newSet = new Set([...prev, ...newNumbers]);
-                    return Array.from(newSet);
-                });
-            } else {
-                setSelectedNumbers([newNumbers[0]]);
-            }
+            setSelectedNumbers(prev => {
+                const newSet = new Set([...prev, ...newNumbers]);
+                return Array.from(newSet);
+            });
+            setRandomNumbers(prev => Array.from(new Set([...prev, ...newNumbers])));
 
             setSpinning(false);
 
@@ -208,19 +206,16 @@ export default function Checkout() {
     const toggleNumber = (num: number) => {
         if (ticketStatuses[num]) return; // Block valid tickets
 
-        if (raffle?.allow_multi_ticket) {
-            if (selectedNumbers.includes(num)) {
-                setSelectedNumbers(selectedNumbers.filter(n => n !== num));
-            } else {
-                setSelectedNumbers([...selectedNumbers, num]);
-            }
+        if (selectedNumbers.includes(num)) {
+            setSelectedNumbers(selectedNumbers.filter(n => n !== num));
         } else {
-            setSelectedNumbers([num]);
+            setSelectedNumbers([...selectedNumbers, num]);
         }
     };
 
     const removeNumber = (numToRemove: number) => {
         setSelectedNumbers(selectedNumbers.filter(n => n !== numToRemove));
+        setRandomNumbers(randomNumbers.filter(n => n !== numToRemove));
     };
 
     const handleSearch = (val: string) => {
@@ -252,15 +247,15 @@ export default function Checkout() {
                 const fileExt = receiptFile.name.split('.').pop();
                 const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt} `;
                 let bucketName = 'images';
-                let { error: uploadError } = await supabase.storage.from(bucketName).upload(`receipts / ${fileName} `, receiptFile);
+                let { error: uploadError } = await supabase.storage.from(bucketName).upload(`receipts/${fileName}`, receiptFile);
 
                 if (uploadError) {
                     bucketName = 'public';
-                    const { error: publicError } = await supabase.storage.from(bucketName).upload(`receipts / ${fileName} `, receiptFile);
+                    const { error: publicError } = await supabase.storage.from(bucketName).upload(`receipts/${fileName}`, receiptFile);
                     if (publicError) throw publicError;
                 }
 
-                const { data } = supabase.storage.from(bucketName).getPublicUrl(`receipts / ${fileName} `);
+                const { data } = supabase.storage.from(bucketName).getPublicUrl(`receipts/${fileName}`);
                 receiptUrl = data.publicUrl;
             }
 
@@ -269,6 +264,7 @@ export default function Checkout() {
                 raffle_id: raffle.id,
                 ticket_number: num,
                 price_paid: raffle.price,
+                client_name: userDetails.name,
                 client_id_number: userDetails.idNumber,
                 client_email: userDetails.email,
                 client_phone: userDetails.phone,
@@ -286,7 +282,8 @@ export default function Checkout() {
                 ticketCount: selectedNumbers.length,
                 totalAmount: selectedNumbers.length * raffle.price,
                 phone: userDetails.phone,
-                name: userDetails.name
+                name: userDetails.name,
+                tickets: selectedNumbers // Pass tickets to summary
             });
             setPurchaseComplete(true);
 
@@ -350,6 +347,16 @@ export default function Checkout() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', margin: '0.5rem 0', color: '#ea580c' }}>
                             <span>Estado:</span>
                             <strong>⏳ Pendiente de Activación</strong>
+                        </div>
+                        <div style={{ marginTop: '1rem', textAlign: 'left' }}>
+                            <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#0369a1', fontWeight: 'bold' }}>Tus Números:</p>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                                {purchaseSummary.tickets.map((n: number) => (
+                                    <span key={n} style={{ background: 'white', padding: '0.2rem 0.5rem', borderRadius: '4px', border: '1px solid #bae6fd', fontWeight: 'bold', color: '#0369a1', fontSize: '0.9rem' }}>
+                                        {n.toString().padStart(4, '0')}
+                                    </span>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
@@ -433,7 +440,7 @@ export default function Checkout() {
                                 transition: 'width 1s ease-out'
                             }}></div>
                             <span style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold', color: '#475569', textShadow: '0 0 2px rgba(255,255,255,0.8)' }}>
-                                {soldTickets.length} / {raffle.total_tickets || 10000} Tickets Vendidos
+                                {Math.round((soldTickets.length / (raffle.total_tickets || 10000)) * 100)}% Vendidos
                             </span>
                         </div>
                     </div>
@@ -474,9 +481,9 @@ export default function Checkout() {
                     <div style={{ background: '#fffbeb', padding: '1.5rem', borderRadius: '1rem', marginBottom: '2rem', border: '2px dashed #fcd34d', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                         <div>
                             <h3 style={{ margin: '0 0 0.5rem 0', color: '#b45309', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.2rem' }}>
-                                ⚡ Selección Rápida al Azar
+                                ⚡ Ráfaga de Suerte
                             </h3>
-                            <p style={{ margin: 0, color: '#92400e', fontSize: '0.9rem' }}>Elige cuántos tickets deseas y los pre-seleccionaremos al instante.</p>
+                            <p style={{ margin: 0, color: '#92400e', fontSize: '0.9rem' }}>Selecciona cuántos tickets quieres y deja que el azar decida por ti.</p>
                         </div>
 
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'center' }}>
@@ -609,7 +616,12 @@ export default function Checkout() {
                                 Total: <strong style={{ fontSize: '1.4rem' }}>{formatPrice(selectedNumbers.length * raffle.price)}</strong>
                             </p>
                             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '1rem' }}>
-                                {selectedNumbers.map(n => (
+                                {randomNumbers.length > 0 && (
+                                    <div style={{ background: '#fef3c7', padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #f59e0b', color: '#b45309', fontWeight: 'bold' }}>
+                                        🎯 {randomNumbers.length} Ticket{randomNumbers.length > 1 ? 's' : ''} al azar seleccionados
+                                    </div>
+                                )}
+                                {selectedNumbers.filter(n => !randomNumbers.includes(n)).map(n => (
                                     <div key={n} style={{ background: 'white', padding: '0.3rem 0.6rem', borderRadius: '0.4rem', border: '1px solid #fda4af', fontSize: '1rem', color: '#be123c', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                         {n.toString().padStart(4, '0')}
                                         <button

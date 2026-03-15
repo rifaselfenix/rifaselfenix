@@ -16,13 +16,13 @@ export default function Navbar() {
                 {/* Logo & Version */}
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ fontSize: '1.8rem' }}>🔥</span>
+                        <img src="/logo.png" alt="Rifas Fénix" style={{ height: '40px', objectFit: 'contain' }} />
                         <span style={{ fontSize: '1.5rem', fontWeight: '800', background: 'linear-gradient(to right, #be123c, #fb7185)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                             Rifas Fénix
                         </span>
                     </Link>
-                    <span style={{ fontSize: '0.65rem', color: '#10b981', marginLeft: '2.5rem', marginTop: '-0.2rem', fontWeight: 'bold' }}>
-                        v2.0 (Actualizado)
+                    <span style={{ fontSize: '0.65rem', color: '#10b981', marginLeft: '3rem', marginTop: '-0.2rem', fontWeight: 'bold' }}>
+                        v2.1 (Actualizado)
                     </span>
                 </div>
 
