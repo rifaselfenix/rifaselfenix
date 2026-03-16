@@ -9,6 +9,7 @@ export default function MyTickets() {
     const [searchTerm, setSearchTerm] = useState('');
     const [tickets, setTickets] = useState<any[] | null>(null);
     const [loading, setLoading] = useState(false);
+    const [debugInfo, setDebugInfo] = useState<string>('');
     const location = useLocation();
 
     useEffect(() => {
@@ -26,30 +27,65 @@ export default function MyTickets() {
 
         setLoading(true);
         setTickets(null);
+        setDebugInfo('');
         console.log('Searching for:', cleanTerm);
 
-        // Search by phone OR email OR id
-        // Using ilike with % wildcards for all fields to be extra permissive
-        const { data, error } = await supabase
-            .from('tickets')
-            .select('*, raffles ( title, image_url )')
-            .or(`client_phone.ilike.%${cleanTerm}%,client_email.ilike.%${cleanTerm}%,client_id_number.ilike.%${cleanTerm}%`)
-            .order('created_at', { ascending: false });
+        try {
+            // Test public access first
+            const { count, error: countError } = await supabase.from('tickets').select('*', { count: 'exact', head: true });
+            if (countError) {
+                setDebugInfo(`Error de permisos: ${countError.message}`);
+            } else {
+                setDebugInfo(`Conexión OK. Total tickets en sistema: ${count || 0}`);
+            }
 
-        if (error) {
-            console.error('Search error:', error);
-            // Fallback for potential relation issues (e.g. if raffles relation fails)
-            const { data: fallbackData, error: fallbackError } = await supabase
+            // Search by phone OR email OR id
+            // Using ilike with % wildcards for all fields to be extra permissive
+            const { data, error } = await supabase
                 .from('tickets')
-                .select('*')
+                .select('*, raffles ( title, image_url )')
                 .or(`client_phone.ilike.%${cleanTerm}%,client_email.ilike.%${cleanTerm}%,client_id_number.ilike.%${cleanTerm}%`)
                 .order('created_at', { ascending: false });
 
-            if (fallbackError) console.error('Fallback error:', fallbackError);
-            setTickets(fallbackData || []);
-        } else {
-            console.log('Results found:', data?.length);
-            setTickets(data || []);
+            if (error) {
+                console.error('Search error:', error);
+                setDebugInfo(prev => `${prev} | Error búsqueda: ${error?.message}`);
+
+                // Fallback 1: No relations
+                const { data: fallbackData, error: fallbackError } = await supabase
+                    .from('tickets')
+                    .select('*')
+                    .or(`client_phone.ilike.%${cleanTerm}%,client_email.ilike.%${cleanTerm}%,client_id_number.ilike.%${cleanTerm}%`)
+                    .order('created_at', { ascending: false });
+
+                if (fallbackError) {
+                    setDebugInfo(prev => `${prev} | Fallback 1 Error: ${fallbackError.message}`);
+                } else {
+                    data = fallbackData;
+                }
+            }
+
+            // Fallback 2: If still no data, try simple equality for ID or Phone (exactly as entered)
+            if (!data || data.length === 0) {
+                const { data: eqData } = await supabase
+                    .from('tickets')
+                    .select('*, raffles ( title, image_url )')
+                    .or(`client_phone.eq.${cleanTerm},client_id_number.eq.${cleanTerm}`)
+                    .order('created_at', { ascending: false });
+
+                if (eqData && eqData.length > 0) {
+                    data = eqData;
+                }
+            }
+
+            if (data) {
+                console.log('Results found:', data?.length);
+                setTickets(data);
+            } else {
+                setTickets([]);
+            }
+        } catch (err: any) {
+            setDebugInfo(prev => `${prev} | Error General: ${err.message}`);
         }
         setLoading(false);
     };
@@ -81,6 +117,13 @@ export default function MyTickets() {
                         {loading ? '...' : <Search size={24} />}
                     </button>
                 </form>
+
+                {/* Debug Info (Only shows if there is an error or count) */}
+                {debugInfo && (
+                    <div style={{ maxWidth: '500px', margin: '-3rem auto 2rem auto', fontSize: '0.7rem', color: '#94a3b8', textAlign: 'center', opacity: 0.5 }}>
+                        {debugInfo}
+                    </div>
+                )}
 
                 {/* Results */}
                 {tickets && (
