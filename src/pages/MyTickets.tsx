@@ -45,7 +45,7 @@ export default function MyTickets() {
                 .from('tickets')
                 .select('*, raffles ( title, image_url )')
                 .or(`client_phone.ilike.%${cleanTerm}%,client_email.ilike.%${cleanTerm}%,client_id_number.ilike.%${cleanTerm}%`)
-                .order('created_at', { ascending: false });
+                .order('id', { ascending: false });
 
             if (error) {
                 console.error('Search error:', error);
@@ -56,7 +56,7 @@ export default function MyTickets() {
                     .from('tickets')
                     .select('*')
                     .or(`client_phone.ilike.%${cleanTerm}%,client_email.ilike.%${cleanTerm}%,client_id_number.ilike.%${cleanTerm}%`)
-                    .order('created_at', { ascending: false });
+                    .order('id', { ascending: false });
 
                 if (fallbackError) {
                     setDebugInfo(prev => `${prev} | Fallback 1 Error: ${fallbackError.message}`);
@@ -71,7 +71,7 @@ export default function MyTickets() {
                     .from('tickets')
                     .select('*, raffles ( title, image_url )')
                     .or(`client_phone.eq.${cleanTerm},client_id_number.eq.${cleanTerm}`)
-                    .order('created_at', { ascending: false });
+                    .order('id', { ascending: false });
 
                 if (eqData && eqData.length > 0) {
                     data = eqData;

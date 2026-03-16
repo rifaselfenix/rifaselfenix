@@ -22,7 +22,7 @@ export default function Navbar() {
                         </span>
                     </Link>
                     <span style={{ fontSize: '0.65rem', color: '#10b981', marginLeft: '3rem', marginTop: '-0.2rem', fontWeight: 'bold' }}>
-                        v2.3 (Debug Mode)
+                        v2.4 (Search Logic Fix)
                     </span>
                 </div>
 
