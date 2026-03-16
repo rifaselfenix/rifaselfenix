@@ -24,6 +24,7 @@ export default function Login() {
         if (error) {
             alert('Error: ' + error.message);
         } else {
+            localStorage.setItem('admin_session', 'active');
             navigate('/admin');
         }
     };

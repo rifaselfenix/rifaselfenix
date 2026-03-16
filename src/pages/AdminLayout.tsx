@@ -22,8 +22,11 @@ export default function AdminLayout() {
     }, []);
 
     const checkSession = async () => {
+        const localAuth = localStorage.getItem('admin_session');
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
+
+        if (!session || localAuth !== 'active') {
+            localStorage.removeItem('admin_session');
             navigate('/login');
         }
         setChecking(false);
@@ -31,6 +34,7 @@ export default function AdminLayout() {
 
     const handleLogout = async (e: React.MouseEvent) => {
         e.preventDefault();
+        localStorage.removeItem('admin_session');
         await supabase.auth.signOut();
         navigate('/');
     };
@@ -41,9 +45,9 @@ export default function AdminLayout() {
         <div className="admin-container">
             <aside className="admin-sidebar">
                 <div style={{ marginBottom: '2rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                        <span style={{ fontSize: '1.5rem' }}>🔥</span>
-                        <h2 style={{ margin: 0, color: '#881337', fontSize: '1.5rem' }}>Fénix Admin</h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '1.5rem' }}>
+                        <img src="/logo.png" alt="Logo" style={{ height: '40px', width: 'auto' }} />
+                        <h2 style={{ margin: 0, color: '#881337', fontSize: '1.2rem', fontWeight: '800' }}>Fénix Admin</h2>
                     </div>
 
                     <Link to="/" style={{

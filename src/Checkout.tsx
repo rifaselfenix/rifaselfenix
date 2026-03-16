@@ -246,7 +246,7 @@ export default function Checkout() {
 
             if (receiptFile) {
                 const fileExt = receiptFile.name.split('.').pop();
-                const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt} `;
+                const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
                 let bucketName = 'images';
                 let { error: uploadError } = await supabase.storage.from(bucketName).upload(`receipts/${fileName}`, receiptFile);
 
