@@ -3,7 +3,11 @@ import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { sendTicketEmail } from '../lib/email';
 import confetti from 'canvas-confetti';
-import { ArrowLeft, Phone, Edit2, CheckCircle, ExternalLink, Ticket, Trophy, Download, Copy, Play, Search, Trash2 } from 'lucide-react';
+import {
+    LayoutDashboard, Ticket, LogOut, Image, Coins, Users, Search, Phone,
+    ExternalLink, CheckCircle, Trash2, Copy, Trash, MessageSquare, AlertCircle,
+    Upload, Save, X, ArrowLeft, Edit2, Trophy, Download, Play
+} from 'lucide-react';
 
 export default function AdminRaffleDetails() {
     const { id } = useParams();
@@ -99,6 +103,36 @@ export default function AdminRaffleDetails() {
         await supabase.from('raffle_prices').update({ is_primary: false }).eq('raffle_id', id);
         // 2. Set new primary
         await supabase.from('raffle_prices').update({ is_primary: true }).eq('id', priceId);
+    };
+
+    const handleAdminReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>, group: any) => {
+        if (!e.target.files || e.target.files.length === 0) return;
+        const file = e.target.files[0];
+        const ticketIds = group.tickets.map((t: any) => t.id);
+
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `admin-receipt-${Date.now()}.${fileExt}`;
+            const filePath = `receipts/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage.from('images').upload(filePath, file);
+            if (uploadError) throw uploadError;
+
+            const { data } = supabase.storage.from('images').getPublicUrl(filePath);
+            const receiptUrl = data.publicUrl;
+
+            const { error: updateError } = await supabase
+                .from('tickets')
+                .update({ payment_receipt_url: receiptUrl })
+                .in('id', ticketIds);
+
+            if (updateError) throw updateError;
+
+            setTickets(tickets.map(t => ticketIds.includes(t.id) ? { ...t, payment_receipt_url: receiptUrl } : t));
+            alert('✅ Recibo subido y vinculado con éxito.');
+        } catch (error: any) {
+            alert('Error subiendo recibo: ' + error.message);
+        }
     };
 
     const toggleMultiTicket = async () => {
@@ -317,19 +351,21 @@ Puedes ver y descargar tus tickets aquí: ${link}
         if (!confirm(`¿Verificar pago de ${group.client_name} por ${group.tickets.length} tickets?`)) return;
 
         const ticketIds = group.tickets.map((t: any) => t.id);
+        const now = new Date().toISOString();
+
         const { data, error } = await supabase
             .from('tickets')
-            .update({ status: 'paid' })
+            .update({ status: 'paid', paid_at: now })
             .in('id', ticketIds)
             .select();
 
         if (error) {
             alert('Error verificando: ' + error.message);
         } else if (!data || data.length === 0) {
-            alert('❌ ERROR CRÍTICO: No se guardaron los cambios. Es posible que falten permisos en la tabla "tickets". Ejecuta el script SQL "fix_tickets_permissions.sql".');
+            alert('❌ ERROR CRÍTICO: No se guardaron los cambios. Es posible que falten permisos en la tabla "tickets" (o la columna "paid_at" no exista).');
         } else {
             // Optimistic Update
-            setTickets(tickets.map(t => ticketIds.includes(t.id) ? { ...t, status: 'paid' } : t));
+            setTickets(tickets.map(t => ticketIds.includes(t.id) ? { ...t, status: 'paid', paid_at: now } : t));
             alert('✅ Orden aprobada exitosamente');
 
             if (group.client_phone) {
@@ -624,7 +660,8 @@ Puedes ver y descargar tus tickets aquí: ${link}
                                 <th style={{ padding: '1rem' }}>Tickets Seleccionados</th>
                                 <th style={{ padding: '1rem' }}>Método</th>
                                 <th style={{ padding: '1rem' }}>Total a Pagar</th>
-                                <th style={{ padding: '1rem' }}>Fecha</th>
+                                <th style={{ padding: '1rem' }}>Reserva</th>
+                                <th style={{ padding: '1rem' }}>Activación</th>
                                 <th style={{ padding: '1rem' }}>Comprobante</th>
                                 <th style={{ padding: '1rem', textAlign: 'right' }}>Acción</th>
                             </tr>
@@ -660,16 +697,26 @@ Puedes ver y descargar tus tickets aquí: ${link}
                                         ${group.totalAmount.toLocaleString()}
                                     </td>
                                     <td style={{ padding: '1rem', fontSize: '0.9rem', color: '#64748b' }}>
-                                        {group.created_at ? (
+                                        <div style={{ fontWeight: 'bold', color: '#334155' }}>
+                                            {new Date(group.created_at).toLocaleDateString()}
+                                        </div>
+                                        <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                                            {new Date(group.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </div>
+                                    </td>
+                                    <td style={{ padding: '1rem', fontSize: '0.9rem', color: '#64748b' }}>
+                                        {group.tickets && group.tickets[0]?.paid_at ? (
                                             <>
-                                                <div style={{ fontWeight: 'bold', color: '#334155' }}>
-                                                    {new Date(group.created_at).toLocaleDateString()}
+                                                <div style={{ fontWeight: 'bold', color: '#059669' }}>
+                                                    {new Date(group.tickets[0].paid_at).toLocaleDateString()}
                                                 </div>
-                                                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                                                    {new Date(group.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                <div style={{ fontSize: '0.8rem', color: '#059669', opacity: 0.8 }}>
+                                                    {new Date(group.tickets[0].paid_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </div>
                                             </>
-                                        ) : '-'}
+                                        ) : (
+                                            <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '0.8rem' }}>Pendiente</span>
+                                        )}
                                     </td>
                                     <td style={{ padding: '1rem' }}>
                                         {group.payment_receipt_url ? (
@@ -682,7 +729,17 @@ Puedes ver y descargar tus tickets aquí: ${link}
                                                 </span>
                                             </div>
                                         ) : (
-                                            <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontStyle: 'italic' }}>Sin Recibo</span>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontStyle: 'italic' }}>Sin Recibo</span>
+                                                <label style={{
+                                                    background: '#f1f5f9', border: '1px dashed #cbd5e1', padding: '0.3rem 0.5rem',
+                                                    borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer', textAlign: 'center',
+                                                    color: '#64748b', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.2rem', justifyContent: 'center'
+                                                }}>
+                                                    <Upload size={12} /> Subir
+                                                    <input type="file" hidden accept="image/*" onChange={(e) => handleAdminReceiptUpload(e, group)} />
+                                                </label>
+                                            </div>
                                         )}
                                     </td>
                                     <td style={{ padding: '1rem', textAlign: 'right' }}>

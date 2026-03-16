@@ -16,7 +16,7 @@ export default function AdminClients() {
         setLoading(true);
         const { data, error } = await supabase
             .from('tickets')
-            .select('client_name, client_phone, client_id_number, price_paid, status');
+            .select('client_name, client_phone, client_id_number, price_paid, status, created_at, paid_at');
 
         if (error) {
             console.error('Error loading clients:', error);
@@ -32,12 +32,23 @@ export default function AdminClients() {
                         id_number: t.client_id_number || '-',
                         totalTickets: 0,
                         totalPaid: 0,
-                        pendingTickets: 0
+                        pendingTickets: 0,
+                        firstSeen: t.created_at,
+                        lastPaid: t.paid_at
                     };
                 }
                 clientMap[key].totalTickets += 1;
+
+                // Track timestamps
+                if (new Date(t.created_at) < new Date(clientMap[key].firstSeen)) {
+                    clientMap[key].firstSeen = t.created_at;
+                }
+
                 if (t.status === 'paid') {
                     clientMap[key].totalPaid += (t.price_paid || 0);
+                    if (!clientMap[key].lastPaid || new Date(t.paid_at!) > new Date(clientMap[key].lastPaid)) {
+                        clientMap[key].lastPaid = t.paid_at;
+                    }
                 } else if (t.status === 'reserved') {
                     clientMap[key].pendingTickets += 1;
                 }
@@ -86,6 +97,7 @@ export default function AdminClients() {
                                 <th style={{ padding: '1rem' }}>ID Documento</th>
                                 <th style={{ padding: '1rem' }}>Tickets Totales</th>
                                 <th style={{ padding: '1rem' }}>Inversión Total</th>
+                                <th style={{ padding: '1rem' }}>Reserva / Pago</th>
                                 <th style={{ padding: '1rem', textAlign: 'right' }}>Acciones</th>
                             </tr>
                         </thead>
@@ -113,6 +125,18 @@ export default function AdminClients() {
                                     </td>
                                     <td style={{ padding: '1rem', fontWeight: 'bold', color: '#059669' }}>
                                         ${client.totalPaid.toLocaleString()}
+                                    </td>
+                                    <td style={{ padding: '1rem', fontSize: '0.85rem' }}>
+                                        <div style={{ color: '#334155' }}>
+                                            <span style={{ color: '#94a3b8' }}>R: </span>
+                                            {new Date(client.firstSeen).toLocaleDateString()}
+                                        </div>
+                                        {client.lastPaid && (
+                                            <div style={{ color: '#059669', fontWeight: 'bold' }}>
+                                                <span style={{ color: '#94a3b8' }}>P: </span>
+                                                {new Date(client.lastPaid).toLocaleDateString()}
+                                            </div>
+                                        )}
                                     </td>
                                     <td style={{ padding: '1rem', textAlign: 'right' }}>
                                         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
