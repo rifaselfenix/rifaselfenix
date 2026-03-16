@@ -26,27 +26,30 @@ export default function MyTickets() {
 
         setLoading(true);
         setTickets(null);
+        console.log('Searching for:', cleanTerm);
 
         // Search by phone OR email OR id
-        // Using ilike with % for phone/id to handle country codes and the previous trailing space bug
+        // Using ilike with % wildcards for all fields to be extra permissive
         const { data, error } = await supabase
             .from('tickets')
             .select('*, raffles ( title, image_url )')
-            .or(`client_phone.ilike.%${cleanTerm}%,client_email.ilike.${cleanTerm},client_id_number.ilike.%${cleanTerm}%`)
+            .or(`client_phone.ilike.%${cleanTerm}%,client_email.ilike.%${cleanTerm}%,client_id_number.ilike.%${cleanTerm}%`)
             .order('created_at', { ascending: false });
 
-        if (data) {
-            setTickets(data);
+        if (error) {
+            console.error('Search error:', error);
+            // Fallback for potential relation issues (e.g. if raffles relation fails)
+            const { data: fallbackData, error: fallbackError } = await supabase
+                .from('tickets')
+                .select('*')
+                .or(`client_phone.ilike.%${cleanTerm}%,client_email.ilike.%${cleanTerm}%,client_id_number.ilike.%${cleanTerm}%`)
+                .order('created_at', { ascending: false });
+
+            if (fallbackError) console.error('Fallback error:', fallbackError);
+            setTickets(fallbackData || []);
         } else {
-            console.error(error);
-            if (error?.message?.includes('could not find')) {
-                const { data: simpleData } = await supabase
-                    .from('tickets')
-                    .select('*')
-                    .or(`client_phone.ilike.%${cleanTerm}%,client_email.ilike.${cleanTerm},client_id_number.ilike.%${cleanTerm}%`)
-                    .order('created_at', { ascending: false });
-                setTickets(simpleData || []);
-            }
+            console.log('Results found:', data?.length);
+            setTickets(data || []);
         }
         setLoading(false);
     };
