@@ -41,7 +41,7 @@ export default function MyTickets() {
 
             // Search by phone OR email OR id
             // Using ilike with % wildcards for all fields to be extra permissive
-            const { data, error } = await supabase
+            let { data, error } = await supabase
                 .from('tickets')
                 .select('*, raffles ( title, image_url )')
                 .or(`client_phone.ilike.%${cleanTerm}%,client_email.ilike.%${cleanTerm}%,client_id_number.ilike.%${cleanTerm}%`)
